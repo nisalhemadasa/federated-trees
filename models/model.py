@@ -1,0 +1,97 @@
+"""
+Description: This module defines a simple feedforward neural network model using PyTorch.
+
+Author: Nisal Hemadasa
+Date: 18-10-2024
+Version: 1.0
+"""
+from typing import Tuple
+
+import torch
+import torch.nn as nn
+
+
+class SimpleModel(nn.Module):
+    def __init__(self):
+        super(SimpleModel, self).__init__()
+        # Define the layers for MNIST dataset (28 x 28 dimensional images)
+        self.dense1 = nn.Linear(in_features=28 * 28, out_features=10)  # Dense layer with 28 * 28 inputs and 10 outputs
+        self.relu = nn.ReLU()  # ReLU activation function
+        self.dense2 = nn.Linear(10, 1)  # Output layer with 10 inputs and 1 output
+        # self.sigmoid = nn.Sigmoid()  # Sigmoid activation function
+
+    def forward(self, x):
+        """Forward pass through the network"""
+        # Flatten the input to (batch_size, 784)
+        x = x.view(x.size(0), -1)
+        x = self.dense1(x)
+        x = self.relu(x)
+        x = self.dense2(x)
+        # x = self.sigmoid(x)
+        return x
+
+
+def train(_model, _dataset, epochs: int, verbose=False):
+    """
+    Train the network on the training set.
+    """
+    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCELoss()
+    # criterion = torch.nn.CrossEntropyLoss()
+    _optimizer = torch.optim.Adam(_model.parameters())
+    _model.train()
+    for epoch in range(epochs):
+        correct, total, epoch_loss = 0, 0, 0.0
+        # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types
+        for _x, _y in _dataset:
+            inputs = _x.float()  # _x is already a tensor, no need for conversion
+            labels = _y.unsqueeze(1).float()  # Ensure labels are in the right format
+
+        outputs = _model(inputs)
+
+        _optimizer.zero_grad()
+        _loss = criterion(outputs, labels)
+        _loss.backward()
+        _optimizer.step()
+
+        # Metrics
+        epoch_loss += _loss
+        total += labels.size(0)
+        correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+
+        epoch_loss /= len(_dataset)
+        epoch_acc = correct / total
+        if verbose:
+            print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
+
+
+def test(_model, _dataset) -> Tuple[float, float]:
+    """
+    Evaluate the network on the entire test set.
+
+    :return: Tuple of loss and accuracy
+    """
+    criterion = nn.BCEWithLogitsLoss()
+    correct, total, loss = 0, 0, 0.0
+    _model.eval()
+    with torch.no_grad():
+        # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types
+        for _x, _y in _dataset:
+            inputs = _x.float()  # _x is already a tensor, no need for conversion
+            labels = _y.unsqueeze(1).float()  # Ensure labels are in the right format
+
+            # forward pass
+            outputs = _model(inputs)
+
+            # compute loss
+            loss += criterion(outputs, labels).item()
+
+            # compute accuracy
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    # average loss over all samples
+    loss /= len(_dataset)
+    accuracy = correct / total
+    return loss, accuracy
