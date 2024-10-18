@@ -10,13 +10,21 @@ from typing import List
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
-from constants import const
-from models.model import train, test
+import constants
+from data.dataset_loader import load_datasets
+from models.model import train, test, SimpleModel
+
+DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
+print(
+    f"Training on {DEVICE} using PyTorch {torch.__version__}"
+)
 
 
 class Client:
-    def __init__(self, model, trainloader, valloader):
+    def __init__(self, client_id, model, trainloader, valloader):
+        self.client_id = client_id
         self.model = model
         self.trainloader = trainloader
         self.valloader = valloader
@@ -32,7 +40,24 @@ class Client:
     def evaluate(self, parameters, config):
         set_parameters(self.model, parameters)
         loss, accuracy = test(self.model, self.valloader)
-        return float(loss), len(self.valloader), {const.MiscMessages: float(accuracy)}
+        return float(loss), len(self.valloader), {constants.MiscMessages.ACCURACY: float(accuracy)}
+
+
+def client_fn(client_id: int) -> Client:
+    """
+    Create a client instances on demand for the optimal use of resources.
+
+    :returns FlowerClient: A Flower client instance.
+    """
+
+    # Load model
+    _model = SimpleModel().to(DEVICE)
+
+    # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
+    train_set, test_set = load_datasets(100, False, "MNIST")
+
+    # Create a  single Flower client representing a single organization
+    return Client(client_id, _model, train_set, test_set)
 
 
 def set_parameters(net, parameters: List[np.ndarray]):
