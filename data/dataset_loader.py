@@ -18,9 +18,6 @@ from torchvision.datasets.mnist import read_image_file, read_label_file
 import constants
 from data.utils import get_loaders_from_datasets
 
-BATCH_SIZE = 64
-DOWNLOAD_DATASET = False  # Set to 'True' if the dataset needs to be downloaded before loading
-
 
 def load_datasets(_batch_size: int, _if_dataset_download: bool, _dataset_name: str) -> List[DataLoader]:
     """

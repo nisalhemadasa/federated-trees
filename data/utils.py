@@ -5,6 +5,8 @@ Author: Nisal Hemadasa
 Date: 19-09-2024
 Version: 1.0
 """
+from __future__ import annotations
+
 import os
 
 import torch
