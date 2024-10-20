@@ -43,23 +43,6 @@ class Client:
         return float(loss), len(self.valloader), {constants.MiscMessages.ACCURACY: float(accuracy)}
 
 
-def client_fn(client_id: int) -> Client:
-    """
-    Create a client instances on demand for the optimal use of resources.
-
-    :returns FlowerClient: A Flower client instance.
-    """
-
-    # Load model
-    _model = SimpleModel().to(DEVICE)
-
-    # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
-    train_set, test_set = load_datasets(100, False, "MNIST")
-
-    # Create a  single Flower client representing a single organization
-    return Client(client_id, _model, train_set, test_set)
-
-
 def set_parameters(net, parameters: List[np.ndarray]):
     params_dict = zip(net.state_dict().keys(), parameters)
     state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
@@ -68,3 +51,20 @@ def set_parameters(net, parameters: List[np.ndarray]):
 
 def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
+
+def client_fn(client_id: int) -> Client:
+    """
+    Create a client instances on demand for the optimal use of resources.
+
+    :returns Client: A Client instance.
+    """
+
+    # Load model
+    _model = SimpleModel().to(DEVICE)
+
+    # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
+    train_set, test_set = load_datasets(64, False, "MNIST")
+
+    # Create a  single Flower client representing a single organization
+    return Client(client_id=client_id, model=_model, trainloader=train_set, valloader=test_set)
