@@ -8,13 +8,15 @@ Version: 1.0
 from typing import List, OrderedDict
 
 import strategy
+from federated_network.client import DEVICE
+from models.model import SimpleModel
 
 
 class Server:
-    def __init__(self, _server_id, _strategy):
+    def __init__(self, _server_id, _strategy, _model):
         self.server_id = _server_id
         self.strategy = _strategy
-        self.server_model = None
+        self.server_model = _model
 
     def train(self, client_model_parameters: List[OrderedDict]) -> None:
         """
@@ -34,4 +36,6 @@ def server_fn(server_id: int) -> Server:
 
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
 
-    return Server(_server_id=server_id, _strategy=strategy.FedAvg.fedavg())
+    model = SimpleModel().to(DEVICE)
+
+    return Server(_server_id=server_id, _strategy=aggregator_strategy, _model=model)
