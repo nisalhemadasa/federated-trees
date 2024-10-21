@@ -1,0 +1,30 @@
+TODO
+
+1. Plotting functions
+- client's accuracies should be tested
+
+2. Debug existing functions and commit
+
+3. Creating data loader for the insects dataset
+
+4. Creating concept drift functions for the image datasets
+ - different types of drifts
+ - asysnchronous
+ - spatial variability -- all the clients
+ 					   -- only a part of the clients
+
+5. Clustering mechanism for the existing clients among the exising multiple servers 
+- (without overlapping?)
+- fomulate the solution 
+- program
+
+6. Create evaluation functions for caculating the loss and accuracies
+
+7. Implement other state of the art aggregator functions
+
+8. All the servers and clients are instantiated with the same NN-model, independantly. That is changing the model for the server, does not make the model of the clients to adapt to that change and vice versa. This might me a problem when model heterogeneity of clients and server might have to be accounted for in teh future.
+
+
+DONE
+
+
