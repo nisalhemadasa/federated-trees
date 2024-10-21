@@ -43,6 +43,12 @@ class FederatedNetwork:
         Run the simulation for the specified number of rounds.
         :return: None
         """
+        # All the clients are trained individually using local data initially
+        clients_loss_n_accuracy = []
+        for client in self.clients:
+            client.fit(None)
+            clients_loss_n_accuracy.append(client.evaluate())
+
         for _round in range(self.num_training_rounds):
             # 1. The round from which the drift is to be included into the data
             # 2. Assign which clients are to be given drifted data
@@ -52,11 +58,6 @@ class FederatedNetwork:
             sampled_clients = self.sample_clients()
             # Implement the clustering algorithm here. That is, which clients to be selected for each server
 
-            # Implement local training for each client
-            for client in sampled_clients:
-                client.fit()
-                l =1
-
             # As an example, only one server is considered
             clients_model_parameters = []
             for client in sampled_clients:
@@ -64,3 +65,8 @@ class FederatedNetwork:
 
             # Aggregate the models of the clients to the server model
             self.servers[0][0].train(clients_model_parameters)
+
+            # Implement local training for each client with aggregated parameters
+            for client in sampled_clients:
+                client.fit(self.servers[0][0].server_model.state_dict())
+                #### Evaluate the client model

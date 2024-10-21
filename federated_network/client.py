@@ -32,15 +32,17 @@ class Client:
     def get_model_weights(self):
         return self.model.state_dict()
 
-    def fit(self, parameters, config):
-        set_parameters(self.model, parameters)
-        train(self.model, self.trainloader, epochs=1)
+    def fit(self, server_model_parameters):
+        # Do not set the server weights and biases if the server aggregation is not done (e.g. initial round)
+        if server_model_parameters is not None:
+            set_parameters(self.model, server_model_parameters)  # Set the aggregated weights server to the client model
+
+        train(self.model, self.trainloader, epochs=1)  # Train the client model using new data and server parameters
         return get_parameters(self.model), len(self.trainloader), {}
 
-    def evaluate(self, parameters, config):
-        set_parameters(self.model, parameters)
+    def evaluate(self):
         loss, accuracy = test(self.model, self.valloader)
-        return float(loss), len(self.valloader), {constants.MiscMessages.ACCURACY: float(accuracy)}
+        return float(loss), float(accuracy)
 
 
 def set_parameters(net, parameters: List[np.ndarray]):
