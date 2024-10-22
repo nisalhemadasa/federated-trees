@@ -8,8 +8,9 @@ Version: 1.0
 from typing import List, OrderedDict
 
 import strategy
+from data.dataset_loader import load_datasets
 from federated_network.client import DEVICE
-from models.model import SimpleModel
+from models.model import SimpleModel, test
 
 
 class Server:
@@ -26,6 +27,15 @@ class Server:
         """
         self.server_model = self.strategy.aggregate_models(self.server_model, client_model_parameters)
 
+    def evaluate(self, _test_set) -> (float, float):
+        """
+        Evaluate the server model using the validation data.
+        :param _test_set: test data
+        :return: loss and accuracy
+        """
+        loss, accuracy = test(self.server_model, _test_set)
+        return float(loss), float(accuracy)
+
 
 def server_fn(server_id: int) -> Server:
     """
@@ -33,9 +43,6 @@ def server_fn(server_id: int) -> Server:
 
     :returns Server: A Server instance.
     """
-
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
-
     model = SimpleModel().to(DEVICE)
-
     return Server(_server_id=server_id, _strategy=aggregator_strategy, _model=model)

@@ -37,7 +37,9 @@ class Client:
         if server_model_parameters is not None:
             set_parameters(self.model, server_model_parameters)  # Set the aggregated weights server to the client model
 
-        train(self.model, self.trainloader, epochs=1)  # Train the client model using new data and server parameters
+        # Train the client model using new data and server parameters
+        train(self.model, self.trainloader, epochs=1)
+
         return get_parameters(self.model), len(self.trainloader), {}
 
     def evaluate(self):
@@ -55,7 +57,7 @@ def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
-def client_fn(client_id: int) -> Client:
+def client_fn(client_id: int, _dataset_name: str) -> Client:
     """
     Create a client instances on demand for the optimal use of resources.
 
@@ -66,7 +68,7 @@ def client_fn(client_id: int) -> Client:
     _model = SimpleModel().to(DEVICE)
 
     # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
-    train_set, test_set = load_datasets(64, False, "MNIST")
+    train_set, test_set = load_datasets(64, False, _dataset_name)
 
     # Create a  single Flower client representing a single organization
     return Client(client_id=client_id, model=_model, trainloader=train_set, valloader=test_set)
