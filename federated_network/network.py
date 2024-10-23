@@ -104,7 +104,7 @@ class FederatedNetwork:
 
             # Implement local training for every client
             for client in self.clients:
-                if client.client_id is in sampled_client_ids:
+                if client.client_id in sampled_client_ids:
                     # if the model was sampled, then train using the server parameters
                     client.fit(self.server_hierarchy[0][0].server_model.state_dict())
                 else:
