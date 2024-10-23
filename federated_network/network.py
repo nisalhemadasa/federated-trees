@@ -102,11 +102,19 @@ class FederatedNetwork:
 
                 server_hierarchy_loss_and_accuracy.append(loss_and_accuracy_at_level)
 
-            # Implement local training for every client
+            # Implement local training for every client and evaluate the client models
+            round_client_loss_and_accuracy = []
+
             for client in self.clients:
                 if client.client_id in sampled_client_ids:
-                    # if the model was sampled, then train using the server parameters
+                    # if the model is sampled, then train using the server aggregated parameters
                     client.fit(self.server_hierarchy[0][0].server_model.state_dict())
                 else:
+                    # If the client is not sampled, perform local training without server parameters
                     client.fit(None)
-                #### Evaluate the client model
+
+                # Evaluate the client model after training
+                round_client_loss_and_accuracy.append(client.evaluate())
+                
+            # Store the performance of all clients for this round
+            clients_loss_and_accuracy.append(round_client_loss_and_accuracy)

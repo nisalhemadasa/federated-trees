@@ -47,10 +47,8 @@ class Client:
         return float(loss), float(accuracy)
 
 
-def set_parameters(net, parameters: List[np.ndarray]):
-    params_dict = zip(net.state_dict().keys(), parameters)
-    state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
-    net.load_state_dict(state_dict, strict=True)
+def set_parameters(_model, parameters: OrderedDict):
+    _model.load_state_dict(parameters, strict=True)
 
 
 def get_parameters(net) -> List[np.ndarray]:
