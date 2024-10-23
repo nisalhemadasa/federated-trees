@@ -55,13 +55,17 @@ class FederatedNetwork:
         Run the simulation for the specified number of rounds.
         :return: None
         """
-        clients_loss_n_accuracy = []
-        server_loss_n_accuracy = []
+        clients_loss_and_accuracy = []
+        initial_client_loss_and_accuracy = []
+        server_hierarchy_loss_and_accuracy = []
+        sampled_clients_in_each_round = []  # To keep track of the client IDs sampled in each round
 
-        # # All the clients are trained individually using local data initially
-        # for client in self.clients:
-        #     client.fit(None)
-        #     clients_loss_n_accuracy.append(client.evaluate())
+        # All the clients are trained individually using local data initially
+        for client in self.clients:
+            client.fit(None)
+            initial_client_loss_and_accuracy.append(client.evaluate())
+
+        clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
         # Load the test set for server evaluation
         _, server_test_set = load_datasets(self.minibatch_size, False, self.dataset_name)
@@ -71,26 +75,38 @@ class FederatedNetwork:
             # 2. Assign which clients are to be given drifted data
             # 3. Sample dataloader to the selected clients from the drift included data
             # 4. Sample clients for the round (the step implemented below)
+
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()
+
+            # Extract the sampled client IDs and store them
+            sampled_client_ids = [client.client_id for client in sampled_clients]
+            sampled_clients_in_each_round.append(sampled_client_ids)
+
             # Implement the clustering algorithm here. That is, which clients to be selected for each server
 
             # As an example, only one server is considered
-            clients_model_parameters = []
-            for client in sampled_clients:
-                clients_model_parameters.append(client.model.state_dict())
+            sampled_clients_model_parameters = [sampled_client.model.state_dict() for sampled_client in sampled_clients]
 
             # Aggregate the models of the clients to the server model
-            for tree_depth_level in range(len(self.servers)):
-                this_level_loss_n_accuracy = []
-                for server in self.servers[tree_depth_level]:
-                    server.train(clients_model_parameters)
-                    # Evaluate server models
-                    loss, accuracy = server.evaluate(server_test_set)
-                    this_level_loss_n_accuracy.append((loss, accuracy))
-                server_loss_n_accuracy.append(this_level_loss_n_accuracy)
+            for depth_level in range(len(self.server_hierarchy)):
+                loss_and_accuracy_at_level = []
 
-            # Implement local training for each client with aggregated parameters
-            for client in sampled_clients:
-                client.fit(self.servers[0][0].server_model.state_dict())
+                for server in self.server_hierarchy[depth_level]:
+                    # Aggregate the models of the sampled clients to the server model
+                    server.train(sampled_clients_model_parameters)
+
+                    # Evaluate server models on the test set
+                    loss, accuracy = server.evaluate(server_test_set)
+                    loss_and_accuracy_at_level.append((loss, accuracy))
+
+                server_hierarchy_loss_and_accuracy.append(loss_and_accuracy_at_level)
+
+            # Implement local training for every client
+            for client in self.clients:
+                if client.client_id is in sampled_client_ids:
+                    # if the model was sampled, then train using the server parameters
+                    client.fit(self.server_hierarchy[0][0].server_model.state_dict())
+                else:
+                    client.fit(None)
                 #### Evaluate the client model
