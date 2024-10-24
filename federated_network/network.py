@@ -11,7 +11,7 @@ from typing import List, OrderedDict
 from data.dataset_loader import load_datasets
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn, Server
-from plotting import plot_performance_vs_rounds
+from plots.plotting import plot_performance_vs_rounds
 
 
 def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
