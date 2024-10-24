@@ -31,9 +31,14 @@ class SimpleModel(nn.Module):
         return x
 
 
-def train(_model, _dataset, epochs: int, verbose=False):
+def train(_model, _dataset, epochs: int, verbose=False) -> None:
     """
     Train the network on the training set.
+    :param _model: The model to train
+    :param _dataset: The training dataset
+    :param epochs: The number of epochs to train for
+    :param verbose: Whether to print training progress
+    :return: None
     """
     criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.BCELoss()
@@ -68,7 +73,8 @@ def train(_model, _dataset, epochs: int, verbose=False):
 def test(_model, _dataset) -> Tuple[float, float]:
     """
     Evaluate the network on the entire test set.
-
+    :param _model: The model to evaluate
+    :param _dataset: The test dataset
     :return: Tuple of loss and accuracy
     """
     criterion = nn.BCEWithLogitsLoss()

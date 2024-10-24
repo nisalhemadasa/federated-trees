@@ -40,7 +40,7 @@ class Server:
 def server_fn(server_id: int) -> Server:
     """
     Create a server instances on demand for the optimal use of resources.
-
+    :param server_id: Server ID
     :returns Server: A Server instance.
     """
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
