@@ -19,6 +19,9 @@ class Paths:
     F_MNIST_DATA_READ = 'data/F_MNIST_data/FashionMNIST/raw/'
     CIFAR_10_DATA_READ = 'data/CIFAR10_data/'
 
+    # path related to saved plots
+    PLOT_SAVE_PATH = './plots/saved_plots/'
+
 
 # String related to miscellaneous messages
 class MiscMessages:
@@ -76,3 +79,14 @@ class DatasetFileNames:
             return [self.F_MNIST_TEST_LABELS]
         else:
             pass
+
+
+# Strings related to plots
+class Plots:
+    NUMBER_OF_ROUNDS = 'Number of Rounds'
+    LOSS = 'Loss'
+    ACCURACY = 'Accuracy'
+    LOSS_VS_ROUNDS_TITLE = 'Loss per Client Across Rounds'
+    ACCURACY_VS_ROUNDS_TITLE = 'Accuracy per Client Across Rounds'
+    LOSS_VS_ROUNDS_PNG = 'loss_vs_rounds.png'
+    ACCURACY_VS_ROUNDS_PNG = 'accuracy_vs_rounds.png'

@@ -11,6 +11,7 @@ from typing import List
 from data.dataset_loader import load_datasets
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn
+from plotting import plot_performance_vs_rounds
 
 
 class FederatedNetwork:
@@ -115,6 +116,8 @@ class FederatedNetwork:
 
                 # Evaluate the client model after training
                 round_client_loss_and_accuracy.append(client.evaluate())
-                
+
             # Store the performance of all clients for this round
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
+
+        plot_performance_vs_rounds(clients_loss_and_accuracy)
