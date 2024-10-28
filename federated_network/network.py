@@ -11,7 +11,7 @@ from typing import List, OrderedDict
 from data.dataset_loader import load_datasets
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn, Server
-from plots.plotting import plot_performance_vs_rounds
+from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
 
 
 def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
@@ -159,7 +159,7 @@ class FederatedNetwork:
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
 
         # Plot the performance of the clients
-        plot_performance_vs_rounds(clients_loss_and_accuracy)
+        # plot_client_performance_vs_rounds(clients_loss_and_accuracy)
 
         # Plot the performance of the server hierarchy
-        plot_performance_vs_rounds(server_loss_and_accuracy)
+        plot_server_performance_vs_rounds(server_loss_and_accuracy)
