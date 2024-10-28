@@ -82,6 +82,17 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server) -> L
     return round_client_loss_and_accuracy
 
 
+def update_progress(_round, _num_training_rounds) -> None:
+    """
+    Update the progress of the simulation
+    :param _round: Current simulation iteration number
+    :param num_training_rounds: Total number of training rounds
+    :return: None
+    """
+    progress = (_round / _num_training_rounds) * 100
+    print(f"\rSimulation Percentage completed: {progress:.2f}%", end="")
+
+
 class FederatedNetwork:
     def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name,
                  client_select_fraction=0.5, minibatch_size=32, num_local_epochs=10):
@@ -158,8 +169,12 @@ class FederatedNetwork:
                                                                  self.server_hierarchy[0][0])
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
 
+            # Update the progress of the simulation
+            update_progress(_round=_round, _num_training_rounds=self.num_training_rounds)
+
         # Plot the performance of the clients
         # plot_client_performance_vs_rounds(clients_loss_and_accuracy)
 
         # Plot the performance of the server hierarchy
         plot_server_performance_vs_rounds(server_loss_and_accuracy)
+

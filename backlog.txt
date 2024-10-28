@@ -24,7 +24,7 @@ TODO
 
 9. creating the main federated learning iteration rounds functionality
 
-10. Progress bar of the training
+
 
 
 
@@ -38,4 +38,7 @@ DONE
 
 1. Plotting functions
 - client's accuracies should be tested
+- server 
+
+10. Progress bar of the training
 
