@@ -6,16 +6,33 @@ Date: 19-10-2024
 Version: 1.0
 """
 import constants
+from drift_concepts.drift import Drift
 from federated_network.network import FederatedNetwork
 
 
 def main():
+    # # Create a drift object
+    # drift = Drift()
+    # Define the drift specifications
+    drift_specifications = dict(
+        clients_fraction=0.5,  # Fraction of clients that are affected by the drift
+        drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds
+        drift_end_round=0.9,  # Round at which the drift ends as a fraction of the total number of rounds
+        is_synchronous=True,  # If the drift is synchronous or asynchronous
+        drift_pattern="abrupt",  # Drift pattern, i.e., abrupt, gradual, etc.
+        drift_method="label-swapping",  # Drift creation method, i.e., label-swapping, rotations
+        max_rotation=45,  # Maximum rotation angle for the drift created by rotations
+        class_pairs_to_swap=[(1, 2), (3, 4), (5, 6)],  # Classes to be swapped in the label-swapping drift method
+    )
+
     # Create a federated network
     fed_net = FederatedNetwork(
-        num_client_instances=2,     # Number of clients in the federated network
-        server_tree_layout=[1],      # Number of servers at each level of the server tree
-        num_training_rounds=2,        # Number of training rounds
-        dataset_name=constants.DatasetNames.MNIST       # Name of the dataset
+        num_client_instances=2,  # Number of clients in the federated network
+        server_tree_layout=[1],  # Number of servers at each level of the server tree
+        num_training_rounds=2,  # Number of training rounds
+        dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset
+        drift_specs=drift_specifications,  # Drift specifications
+        # drift=drift  # Drift object
     )
 
     # Running the simulation
