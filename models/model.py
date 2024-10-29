@@ -9,7 +9,8 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-
+from torch.utils.data import DataLoader
+from federated_network.client import DEVICE
 
 class SimpleModel(nn.Module):
     def __init__(self):
@@ -51,11 +52,11 @@ class CNN(nn.Module):
         return torch.log_softmax(x, dim=1)
 
 
-def train(_model, _dataset, epochs: int, verbose=False) -> None:
+def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False) -> None:
     """
     Train the network on the training set.
     :param _model: The model to train
-    :param _dataset: The training dataset
+    :param _dataloader: The dataloader containing training dataset
     :param epochs: The number of epochs to train for
     :param verbose: Whether to print training progress
     :return: None
@@ -63,28 +64,38 @@ def train(_model, _dataset, epochs: int, verbose=False) -> None:
     criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.BCELoss()
     # criterion = torch.nn.CrossEntropyLoss()
-    _optimizer = torch.optim.Adam(_model.parameters())
+    _optimizer = torch.optim.Adam(_model.parameters(), lr=0.001)
     _model.train()
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
-        # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types
-        for _x, _y in _dataset:
+        # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types.
+        # Also takes batches of data from the dataset and trains the model
+        for _x, _y in _dataloader:
             inputs = _x.float()  # _x is already a tensor, no need for conversion
             labels = _y.unsqueeze(1).float()  # Ensure labels are in the right format
 
-        outputs = _model(inputs)
+            inputs = inputs.to(DEVICE)  # move inputs to device
+            labels = labels.to(DEVICE)  # move labels to device
 
-        _optimizer.zero_grad()
-        _loss = criterion(outputs, labels)
-        _loss.backward()
-        _optimizer.step()
+            # Clear gradients for each batch
+            _optimizer.zero_grad()
 
-        # Metrics
-        epoch_loss += _loss
-        total += labels.size(0)
-        correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            # Forward pass
+            outputs = _model(inputs)
 
-        epoch_loss /= len(_dataset)
+            # Calculate loss
+            _loss = criterion(outputs, labels)
+
+            # Backward pass and optimization
+            _loss.backward()
+            _optimizer.step()
+
+            # Metrics
+            epoch_loss += _loss
+            total += labels.size(0)
+            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+
+        epoch_loss /= len(_dataloader)
         epoch_acc = correct / total
         if verbose:
             print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
