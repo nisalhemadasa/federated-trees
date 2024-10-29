@@ -42,8 +42,6 @@ class Drift:
         # Classes to be swapped in the label-swapping drift method
         self.class_pairs_to_swap = class_pairs_to_swap
 
-
-
     def rotate_images(self, _current_epoch, _start_epoch, _end_epoch, _max_rotation, _images):
         """
         Apply rotation drift to the images.
@@ -51,6 +49,7 @@ class Drift:
         :param _max_rotation: Maximum rotation angle
         :param _start_epoch: Epoch index with which the drift starts
         :param _end_epoch: Epoch index with which the drift ends
+        :param _images: Images to be rotated
         :return:
         """
 
@@ -134,3 +133,16 @@ def drift_fn(num_client_instances: int, num_training_rounds: int, drift_specs: D
                  drifted_client_indices=get_clients_with_drift(num_client_instances, drift_specs['clients_fraction']),
                  max_rotation=drift_specs['max_rotation'],
                  class_pairs_to_swap=drift_specs['class_pairs_to_swap'])
+
+def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:
+    """
+    Apply drift to the training data of the clients.
+    :return:
+    """
+    if drift.drift_method == 'label-swapping':
+        drifted_trainloaders = drift.swap_labels(clients)
+    elif drift.drift_method == 'rotation':
+        for client in clients:
+            # client.trainloader = drift.rotate_images(client.current_epoch, drift.drift_start_round,
+            #                                           drift.drift_end_round, drift.max_rotation, client.trainloader)
+
