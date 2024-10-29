@@ -86,7 +86,7 @@ def update_progress(_round, _num_training_rounds) -> None:
     """
     Update the progress of the simulation
     :param _round: Current simulation iteration number
-    :param num_training_rounds: Total number of training rounds
+    :param _num_training_rounds: Total number of training rounds
     :return: None
     """
     progress = (_round / _num_training_rounds) * 100
@@ -170,7 +170,7 @@ class FederatedNetwork:
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
 
             # Update the progress of the simulation
-            update_progress(_round=_round, _num_training_rounds=self.num_training_rounds)
+            update_progress(_round=_round + 1, _num_training_rounds=self.num_training_rounds)
 
         # Plot the performance of the clients
         # plot_client_performance_vs_rounds(clients_loss_and_accuracy)

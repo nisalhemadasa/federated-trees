@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 
 import constants
 from data.dataset_loader import load_datasets
-from models.model import train, test, SimpleModel
+from models.model import train, test, SimpleModel, CNN
 
 DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
 print(
@@ -71,6 +71,7 @@ def client_fn(client_id: int, num_local_epochs: int, _dataset_name: str) -> Clie
     """
     # Load model
     _model = SimpleModel().to(DEVICE)
+    # _model = CNN().to(DEVICE)
 
     # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
     train_set, test_set = load_datasets(64, False, _dataset_name)
