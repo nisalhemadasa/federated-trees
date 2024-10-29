@@ -31,9 +31,34 @@ class SimpleModel(nn.Module):
         return x
 
 
-def train(_model, _dataset, epochs: int, verbose=False):
+# for MNIST dataset (28 x 28 dimensional images)
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
+        self.fc1 = nn.Linear(64 * 5 * 5, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = torch.max_pool2d(x, kernel_size=2, stride=2)
+        x = torch.relu(self.conv2(x))
+        x = torch.max_pool2d(x, kernel_size=2, stride=2)
+        x = x.view(-1, 64 * 5 * 5)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return torch.log_softmax(x, dim=1)
+
+
+def train(_model, _dataset, epochs: int, verbose=False) -> None:
     """
     Train the network on the training set.
+    :param _model: The model to train
+    :param _dataset: The training dataset
+    :param epochs: The number of epochs to train for
+    :param verbose: Whether to print training progress
+    :return: None
     """
     criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.BCELoss()
@@ -68,7 +93,8 @@ def train(_model, _dataset, epochs: int, verbose=False):
 def test(_model, _dataset) -> Tuple[float, float]:
     """
     Evaluate the network on the entire test set.
-
+    :param _model: The model to evaluate
+    :param _dataset: The test dataset
     :return: Tuple of loss and accuracy
     """
     criterion = nn.BCEWithLogitsLoss()

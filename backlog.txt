@@ -1,9 +1,7 @@
 TODO
 
-1. Plotting functions
-- client's accuracies should be tested
 
-2. Debug existing functions and commit
+
 
 3. Creating data loader for the insects dataset
 
@@ -18,13 +16,29 @@ TODO
 - fomulate the solution 
 - program
 
-6. Create evaluation functions for caculating the loss and accuracies
+
 
 7. Implement other state of the art aggregator functions
 
 8. All the servers and clients are instantiated with the same NN-model, independantly. That is changing the model for the server, does not make the model of the clients to adapt to that change and vice versa. This might me a problem when model heterogeneity of clients and server might have to be accounted for in teh future.
 
+9. creating the main federated learning iteration rounds functionality
+
+
+
+
 
 DONE
 
+2. Debug existing functions and commit
+
+6. Create evaluation functions for caculating the loss and accuracies
+6.1 for the clients
+6.2 for the servers
+
+1. Plotting functions
+- client's accuracies should be tested
+- server 
+
+10. Progress bar of the training
 

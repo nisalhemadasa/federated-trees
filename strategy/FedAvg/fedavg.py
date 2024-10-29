@@ -19,12 +19,7 @@ class FedAvg():
         pass
 
     def aggregate_models(self, server_model, client_model_params_list):
-        """
-        Aggregate the client models to the global model.
-        :param server_model: the current aggregate model of the server
-        :param client_model_params_list: parameters (weights and biases) of the client models to be aggregated
-        :return: the new server-clients aggregated model
-        """
+        """ Aggregate the client models to the global model and returns the new aggregated model"""
         server_model_params = server_model.state_dict()
         for i in server_model_params.keys():
             server_model_params[i] = torch.stack(
@@ -35,11 +30,7 @@ class FedAvg():
 
 
 def aggregator_fn():
-    """
-    Returns an instance of the FedAvg aggregation strategy.
-    :return: FedAvg strategy
-    """
-
+    """ Returns an instance of the FedAvg aggregation strategy """
     _strategy = FedAvg()
     return _strategy
 
