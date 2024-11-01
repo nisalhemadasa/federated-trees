@@ -9,7 +9,7 @@ import random
 from typing import List, OrderedDict
 
 from data.dataset_loader import load_datasets
-from drift_concepts.drift import drift_fn
+from drift_concepts.drift import drift_fn, apply_drift
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn, Server
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
@@ -145,10 +145,9 @@ class FederatedNetwork:
         _, server_test_set = load_datasets(self.minibatch_size, False, self.dataset_name)
 
         for _round in range(self.num_training_rounds):
-            # 1. The round from which the drift is to be included into the data
-            # 2. Assign which clients are to be given drifted data
-            # 3. Sample dataloader to the selected clients from the drift included data
-            # 4. Sample clients for the round (the step implemented below)
+            # Add drift to the clients, if within the drift period
+            if self.drift.drift_start_round <= _round <= self.drift.drift_end_round:
+                apply_drift(self.clients, self.drift)
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()
@@ -181,4 +180,3 @@ class FederatedNetwork:
 
         # Plot the performance of the server hierarchy
         plot_server_performance_vs_rounds(server_loss_and_accuracy)
-

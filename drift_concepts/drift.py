@@ -42,27 +42,30 @@ class Drift:
         # Classes to be swapped in the label-swapping drift method
         self.class_pairs_to_swap = class_pairs_to_swap
 
-    def rotate_images(self, _current_epoch, _start_epoch, _end_epoch, _max_rotation, _images):
+        # Current round of the federated training
+        self.current_round = 0
+
+    def rotate_images(self, _current_round, _drift_start_round, _drift_end_round, _max_rotation, _images):
         """
         Apply rotation drift to the images.
-        :param _current_epoch: Current epoch of the simulation
+        :param _current_round: Current federated training round of the simulation
         :param _max_rotation: Maximum rotation angle
-        :param _start_epoch: Epoch index with which the drift starts
-        :param _end_epoch: Epoch index with which the drift ends
+        :param _drift_start_round: Federated training round with which the drift starts
+        :param _drift_end_round: Federated training round with which the drift ends
         :param _images: Images to be rotated
         :return:
         """
 
         # Determine the rotation angle based on the current epoch
-        if _current_epoch < _start_epoch or _current_epoch > _end_epoch:
+        if _current_round < _drift_start_round or _current_round > _drift_end_round:
             rotation_angle = 0
         else:
-            transition_progress = (_current_epoch - _start_epoch) / (_end_epoch - _start_epoch)
+            transition_progress = (_current_round - _drift_start_round) / (_drift_end_round - _drift_start_round)
             rotation_angle = transition_progress * _max_rotation
 
         # Calculate the number of images to rotate
-        total_epochs = _end_epoch - _start_epoch + 1
-        fraction_rotated = (_current_epoch - _start_epoch + 1) / total_epochs
+        total_epochs = _drift_end_round - _drift_start_round + 1
+        fraction_rotated = (_current_round - _drift_start_round + 1) / total_epochs
         num_images_to_rotate = int(fraction_rotated * len(_images))
 
         # Clone images for manipulation
@@ -84,8 +87,24 @@ class Drift:
         :param clients: Client object List
         :return: Clients objects with the labels swapped in their training set
         """
-        drifted_trainloaders = [client.trainloader for client in self.clients if
-                                client.client_id in self.drifted_client_indices]
+        # drifted_trainloaders = [client.trainloader for client in clients if
+        #                         client.client_id in self.drifted_client_indices]
+        #
+        # # Create a mapping of old labels to new labels
+        # label_map = {}
+        # for class_a, class_b in self.class_pairs_to_swap:
+        #     label_map[class_a] = class_b
+        #     label_map[class_b] = class_a
+        #
+        # # Iterate through the DataLoader
+        # for batch in drifted_trainloaders:
+        #     images, labels = batch["img"], batch["label"]
+        #
+        #     # Swap the class labels
+        #     for old_label, new_label in label_map.items():
+        #         labels[labels == old_label] = new_label
+        #
+        # return drifted_trainloaders  # Optionally return the modified trainloader
 
         # Create a mapping of old labels to new labels
         label_map = {}
@@ -93,15 +112,27 @@ class Drift:
             label_map[class_a] = class_b
             label_map[class_b] = class_a
 
-        # Iterate through the DataLoader
-        for batch in drifted_trainloaders:
-            images, labels = batch["img"], batch["label"]
+        # Process each client and update the trainloader in-place if they are in drifted_client_indices
+        for client in clients:
+            if client.client_id in self.drifted_client_indices:
+                updated_trainloader = []
 
-            # Swap the class labels
-            for old_label, new_label in label_map.items():
-                labels[labels == old_label] = new_label
+                # Iterate through the batches in the client’s trainloader
+                for batch in client.trainloader:
+                    images, labels = batch["img"], batch["label"]
 
-        return drifted_trainloaders  # Optionally return the modified trainloader
+                    # Swap the class labels
+                    for old_label, new_label in label_map.items():
+                        labels[labels == old_label] = new_label
+
+                    # Append the modified batch to the updated trainloader
+                    updated_trainloader.append({"img": images, "label": labels})
+
+                # Update the client's trainloader with the label-swapped version
+                client.trainloader = updated_trainloader
+
+        # Return the modified list of clients
+        return clients
 
 
 def get_clients_with_drift(_num_client_instances: int, _clients_fraction_with_drift: float) -> list:
@@ -134,15 +165,18 @@ def drift_fn(num_client_instances: int, num_training_rounds: int, drift_specs: D
                  max_rotation=drift_specs['max_rotation'],
                  class_pairs_to_swap=drift_specs['class_pairs_to_swap'])
 
+
 def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:
     """
     Apply drift to the training data of the clients.
-    :return:
+    :param clients: List of Client objects
+    :param drift: Drift object
+    :return: List of Client objects with drifted data (dataloaders)
     """
     if drift.drift_method == 'label-swapping':
-        drifted_trainloaders = drift.swap_labels(clients)
+        return drift.swap_labels(clients)
     elif drift.drift_method == 'rotation':
         for client in clients:
-            # client.trainloader = drift.rotate_images(client.current_epoch, drift.drift_start_round,
-            #                                           drift.drift_end_round, drift.max_rotation, client.trainloader)
-
+            client.trainloader = drift.rotate_images(drift.current_round, drift.drift_start_round,
+                                                     drift.drift_end_round, drift.max_rotation, client.trainloader)
+        return clients
