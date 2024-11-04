@@ -10,7 +10,12 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from federated_network.client import DEVICE
+
+DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
+print(
+    f"Training on {DEVICE} using PyTorch {torch.__version__}"
+)
+
 
 class SimpleModel(nn.Module):
     def __init__(self):

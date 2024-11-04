@@ -5,11 +5,12 @@ Author: Nisal Hemadasa
 Date: 29-10-2024
 Version: 1.0
 """
+import math
 from typing import Dict, List
 
 import torch
 from scipy.ndimage import rotate
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from federated_network.client import Client
 
@@ -87,49 +88,36 @@ class Drift:
         :param clients: Client object List
         :return: Clients objects with the labels swapped in their training set
         """
-        # drifted_trainloaders = [client.trainloader for client in clients if
-        #                         client.client_id in self.drifted_client_indices]
-        #
-        # # Create a mapping of old labels to new labels
-        # label_map = {}
-        # for class_a, class_b in self.class_pairs_to_swap:
-        #     label_map[class_a] = class_b
-        #     label_map[class_b] = class_a
-        #
-        # # Iterate through the DataLoader
-        # for batch in drifted_trainloaders:
-        #     images, labels = batch["img"], batch["label"]
-        #
-        #     # Swap the class labels
-        #     for old_label, new_label in label_map.items():
-        #         labels[labels == old_label] = new_label
-        #
-        # return drifted_trainloaders  # Optionally return the modified trainloader
-
-        # Create a mapping of old labels to new labels
-        label_map = {}
-        for class_a, class_b in self.class_pairs_to_swap:
-            label_map[class_a] = class_b
-            label_map[class_b] = class_a
-
         # Process each client and update the trainloader in-place if they are in drifted_client_indices
         for client in clients:
             if client.client_id in self.drifted_client_indices:
-                updated_trainloader = []
+                # Collect modified images and labels into lists
+                all_images = []
+                all_labels = []
 
                 # Iterate through the batches in the client’s trainloader
                 for batch in client.trainloader:
-                    images, labels = batch["img"], batch["label"]
+                    images, labels = batch
 
-                    # Swap the class labels
-                    for old_label, new_label in label_map.items():
-                        labels[labels == old_label] = new_label
+                    # Identify the indices for each label to be swapped
+                    for class_a, class_b in self.class_pairs_to_swap:
+                        indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
+                        indices_b = (labels == class_b).nonzero(as_tuple=True)[0]
 
-                    # Append the modified batch to the updated trainloader
-                    updated_trainloader.append({"img": images, "label": labels})
+                        # Swap the labels at these indices
+                        labels[indices_a] = class_b
+                        labels[indices_b] = class_a
+
+                    all_images.append(images)
+                    all_labels.append(labels)
+
+                # Concatenate all images and labels to create a TensorDataset
+                all_images = torch.cat(all_images, dim=0)
+                all_labels = torch.cat(all_labels, dim=0)
+                updated_dataset = TensorDataset(all_images, all_labels)
 
                 # Update the client's trainloader with the label-swapped version
-                client.trainloader = updated_trainloader
+                client.trainloader = DataLoader(updated_dataset, batch_size=client.trainloader.batch_size)
 
         # Return the modified list of clients
         return clients
@@ -159,8 +147,8 @@ def drift_fn(num_client_instances: int, num_training_rounds: int, drift_specs: D
                  is_synchronous=drift_specs['is_synchronous'],
                  drift_pattern=drift_specs['drift_pattern'],
                  drift_method=drift_specs['drift_method'],
-                 drift_start_round=drift_specs['drift_start_round'] * num_training_rounds,
-                 drift_end_round=drift_specs['drift_end_round'] * num_training_rounds,
+                 drift_start_round=math.ceil(drift_specs['drift_start_round'] * num_training_rounds),
+                 drift_end_round=math.ceil(drift_specs['drift_end_round'] * num_training_rounds),
                  drifted_client_indices=get_clients_with_drift(num_client_instances, drift_specs['clients_fraction']),
                  max_rotation=drift_specs['max_rotation'],
                  class_pairs_to_swap=drift_specs['class_pairs_to_swap'])
