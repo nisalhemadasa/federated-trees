@@ -6,7 +6,6 @@ TODO
 3. Creating data loader for the insects dataset
 
 4. Creating concept drift functions for the image datasets
- 4.1. controlled drift
  4.2. uncontrolled (more random and realistic)
 
 5. Clustering mechanism for the existing clients among the exising multiple servers 
@@ -21,6 +20,10 @@ TODO
 8. All the servers and clients are instantiated with the same NN-model, independantly. That is changing the model for the server, does not make the model of the clients to adapt to that change and vice versa. This might me a problem when model heterogeneity of clients and server might have to be accounted for in teh future.
 
 11. data heteogeneity: two dataset for the clients considering spatiality and temporality
+
+12. Test model accuracies
+
+13. Run initial test with drift
 
 
 
@@ -42,4 +45,7 @@ DONE
 10. Progress bar of the training
 
 9. creating the main federated learning iteration rounds functionality
+
+4. Creating concept drift functions for the image datasets
+ 4.1. controlled drift
 
