@@ -9,6 +9,7 @@ import random
 from typing import List, OrderedDict
 
 from data.dataset_loader import load_datasets
+from drift_concepts.drift import drift_fn, apply_drift
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn, Server
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
@@ -94,7 +95,7 @@ def update_progress(_round, _num_training_rounds) -> None:
 
 
 class FederatedNetwork:
-    def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name,
+    def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name, drift_specs,
                  client_select_fraction=0.5, minibatch_size=32, num_local_epochs=10):
         # Dataset name
         self.dataset_name = dataset_name
@@ -114,6 +115,9 @@ class FederatedNetwork:
         # Create client instances
         self.num_client_instances = num_client_instances
         self.clients = [client_fn(i, self.num_local_epochs, self.dataset_name) for i in range(num_client_instances)]
+
+        # Concept drift properties
+        self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
 
         # Create instances for servers at each level of the server tree
         server_hierarchy = []
@@ -141,10 +145,10 @@ class FederatedNetwork:
         _, server_test_set = load_datasets(self.minibatch_size, False, self.dataset_name)
 
         for _round in range(self.num_training_rounds):
-            # 1. The round from which the drift is to be included into the data
-            # 2. Assign which clients are to be given drifted data
-            # 3. Sample dataloader to the selected clients from the drift included data
-            # 4. Sample clients for the round (the step implemented below)
+            # Add drift to the clients, if within the drift period
+            if self.drift.drift_start_round < _round < self.drift.drift_end_round:
+                self.drift.current_round = _round
+                apply_drift(self.clients, self.drift)
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()
@@ -173,8 +177,7 @@ class FederatedNetwork:
             update_progress(_round=_round + 1, _num_training_rounds=self.num_training_rounds)
 
         # Plot the performance of the clients
-        # plot_client_performance_vs_rounds(clients_loss_and_accuracy)
+        plot_client_performance_vs_rounds(clients_loss_and_accuracy)
 
         # Plot the performance of the server hierarchy
         plot_server_performance_vs_rounds(server_loss_and_accuracy)
-

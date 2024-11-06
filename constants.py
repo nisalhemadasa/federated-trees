@@ -96,3 +96,21 @@ class Plots:
     SERVER_ACCURACY_VS_ROUNDS_TITLE = 'Accuracy per server Across Rounds'
     SERVER_LOSS_VS_ROUNDS_PNG = 'server_loss_vs_rounds.png'
     SERVER_ACCURACY_VS_ROUNDS_PNG = 'server_accuracy_vs_rounds.png'
+
+
+# Drift patterns
+class DriftPatterns:
+    ABRUPT = 'abrupt'
+    GRADUAL = 'gradual'
+    INCREMENTAL = 'incremental'
+    REOCCURRING = 'reoccurring'
+    INCREMENTAL_ABRUPT = 'incre-abrupt'
+    ABRUPT_REOCURRING = 'abrupt-reoc'
+    INCREMENTAL_REOCCURRING = 'incr-reoc'
+    OUT_OF_CONTROL = 'out-of-control'
+
+
+# Drift creation methods
+class DriftCreationMethods:
+    LABEL_SWAPPING = 'label_swapping'
+    ROTATION = 'rotation'
