@@ -12,6 +12,7 @@ import torch
 from scipy.ndimage import rotate
 from torch.utils.data import DataLoader, TensorDataset
 
+import constants
 from federated_network.client import Client
 
 
@@ -46,41 +47,62 @@ class Drift:
         # Current round of the federated training
         self.current_round = 0
 
-    def rotate_images(self, _current_round, _drift_start_round, _drift_end_round, _max_rotation, _images):
+    def rotate_images(self, clients: List[Client]) -> List[Client]:
         """
-        Apply rotation drift to the images.
-        :param _current_round: Current federated training round of the simulation
-        :param _max_rotation: Maximum rotation angle
-        :param _drift_start_round: Federated training round with which the drift starts
-        :param _drift_end_round: Federated training round with which the drift ends
-        :param _images: Images to be rotated
-        :return:
+        Apply rotation drift to the images of the client dataset. Both the rotation angle and the number of images to
+        rotate increase linearly with the number of federated training rounds.
+        :param clients: Client object List
+        :return: Clients objects with the rotated images in their training set
         """
-
-        # Determine the rotation angle based on the current epoch
-        if _current_round < _drift_start_round or _current_round > _drift_end_round:
-            rotation_angle = 0
-        else:
-            transition_progress = (_current_round - _drift_start_round) / (_drift_end_round - _drift_start_round)
-            rotation_angle = transition_progress * _max_rotation
+        # The magnitude of the rotation angle (drift) increases linearly with the number of rounds
+        transition_progress = ((self.current_round + 1) - self.drift_start_round) / (
+                self.drift_end_round - self.drift_start_round)
+        rotation_angle = transition_progress * self.max_rotation
 
         # Calculate the number of images to rotate
-        total_epochs = _drift_end_round - _drift_start_round + 1
-        fraction_rotated = (_current_round - _drift_start_round + 1) / total_epochs
-        num_images_to_rotate = int(fraction_rotated * len(_images))
+        total_rounds = self.drift_end_round - self.drift_start_round + 1
+        fraction_rotated = (self.current_round - self.drift_start_round + 1) / total_rounds
 
-        # Clone images for manipulation
-        drifted_images = _images.clone()
+        for client in clients:
+            # Collect the images and labels data into two separate lists
+            all_images = []
+            all_labels = []
 
-        # Rotate a random selection of images if applicable
-        if num_images_to_rotate > 0 and fraction_rotated <= 1:
-            indices_to_rotate = torch.randperm(len(_images))[:num_images_to_rotate]
-            for idx in indices_to_rotate:
-                # Rotate and update the image in the drifted_images tensor
-                rotated_image = rotate(_images[idx].numpy(), rotation_angle, reshape=False)
-                drifted_images[idx] = torch.tensor(rotated_image)
+            # Iterate through the batches in the client’s trainloader
+            for batch in client.trainloader:
+                images, labels = batch
 
-        return drifted_images
+                if client.client_id in self.drifted_client_indices:
+                    # Only a fraction of the batch (of images) are rotated, which increases linearly with the number of
+                    # rounds
+                    num_images_to_rotate = int(fraction_rotated * len(images))
+
+                    # Clone images for manipulation
+                    drifted_images = images.clone()
+
+                    # Rotate a random selection of images if applicable
+                    if num_images_to_rotate > 0:
+                        indices_to_rotate = torch.randperm(len(images))[:num_images_to_rotate]
+
+                        for i in indices_to_rotate:
+                            # Rotate and update the image in the drifted_images tensor
+                            rotated_image = rotate(images[i].numpy(), rotation_angle, reshape=False)
+                            drifted_images[i] = torch.tensor(rotated_image)
+
+                    all_images.append(drifted_images)
+                    all_labels.append(labels)
+                else:
+                    all_images.append(images)
+                    all_labels.append(labels)
+
+            # Concatenate all images and labels and convert to tensors
+            all_images = torch.cat(all_images, dim=0)
+            all_labels = torch.cat(all_labels, dim=0)
+
+            client.trainloader.dataset.images = all_images
+            client.trainloader.dataset.labels = all_labels
+
+        return clients
 
     def swap_labels(self, clients: List[Client]) -> List[Client]:
         """
@@ -90,15 +112,15 @@ class Drift:
         """
         # Process each client and update the trainloader in-place if they are in drifted_client_indices
         for client in clients:
-            if client.client_id in self.drifted_client_indices:
-                # Collect modified images and labels into lists
-                all_images = []
-                all_labels = []
+            # Collect the images and labels data into two separate lists
+            all_images = []
+            all_labels = []
 
-                # Iterate through the batches in the client’s trainloader
-                for batch in client.trainloader:
-                    images, labels = batch
+            # Iterate through the batches in the client’s trainloader
+            for batch in client.trainloader:
+                images, labels = batch
 
+                if client.client_id in self.drifted_client_indices:
                     # Identify the indices for each label to be swapped
                     for class_a, class_b in self.class_pairs_to_swap:
                         indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
@@ -108,18 +130,16 @@ class Drift:
                         labels[indices_a] = class_b
                         labels[indices_b] = class_a
 
-                    all_images.append(images)
-                    all_labels.append(labels)
+                all_images.append(images)
+                all_labels.append(labels)
 
-                # Concatenate all images and labels to create a TensorDataset
-                all_images = torch.cat(all_images, dim=0)
-                all_labels = torch.cat(all_labels, dim=0)
-                updated_dataset = TensorDataset(all_images, all_labels)
+            # Concatenate all images and labels and convert to tensors
+            all_images = torch.cat(all_images, dim=0)
+            all_labels = torch.cat(all_labels, dim=0)
 
-                # Update the client's trainloader with the label-swapped version
-                client.trainloader = DataLoader(updated_dataset, batch_size=client.trainloader.batch_size)
+            client.trainloader.dataset.images = all_images
+            client.trainloader.dataset.labels = all_labels
 
-        # Return the modified list of clients
         return clients
 
 
@@ -161,10 +181,10 @@ def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:
     :param drift: Drift object
     :return: List of Client objects with drifted data (dataloaders)
     """
-    if drift.drift_method == 'label-swapping':
+    if drift.drift_method == constants.DriftCreationMethods.LABEL_SWAPPING:
         return drift.swap_labels(clients)
-    elif drift.drift_method == 'rotation':
-        for client in clients:
-            client.trainloader = drift.rotate_images(drift.current_round, drift.drift_start_round,
-                                                     drift.drift_end_round, drift.max_rotation, client.trainloader)
+    elif drift.drift_method == constants.DriftCreationMethods.ROTATION:
+        return drift.rotate_images(clients)
+    else:
+        print("Drift method not recognized. No drift applied.")
         return clients

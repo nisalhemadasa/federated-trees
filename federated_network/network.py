@@ -146,7 +146,8 @@ class FederatedNetwork:
 
         for _round in range(self.num_training_rounds):
             # Add drift to the clients, if within the drift period
-            if self.drift.drift_start_round <= _round <= self.drift.drift_end_round:
+            if self.drift.drift_start_round < _round < self.drift.drift_end_round:
+                self.drift.current_round = _round
                 apply_drift(self.clients, self.drift)
 
             # Clients sampled for a single round
