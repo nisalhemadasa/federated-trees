@@ -114,10 +114,11 @@ class FederatedNetwork:
 
         # Create client instances
         self.num_client_instances = num_client_instances
-        self.clients = [client_fn(i, self.num_local_epochs, self.dataset_name) for i in range(num_client_instances)]
+        self.clients = [client_fn(i, self.num_local_epochs, self.minibatch_size, self.dataset_name) for i in
+                        range(num_client_instances)]
 
         # Concept drift properties
-        self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
+        # self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
 
         # Create instances for servers at each level of the server tree
         server_hierarchy = []
@@ -146,9 +147,9 @@ class FederatedNetwork:
 
         for _round in range(self.num_training_rounds):
             # Add drift to the clients, if within the drift period
-            if self.drift.drift_start_round < _round < self.drift.drift_end_round:
-                self.drift.current_round = _round
-                apply_drift(self.clients, self.drift)
+            # if self.drift.drift_start_round < _round < self.drift.drift_end_round:
+            #     self.drift.current_round = _round
+            #     apply_drift(self.clients, self.drift)
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()

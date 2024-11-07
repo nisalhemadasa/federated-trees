@@ -10,7 +10,7 @@ from typing import List, OrderedDict
 import strategy
 from data.dataset_loader import load_datasets
 from federated_network.client import DEVICE
-from models.model import SimpleModel, test
+from models.model import SimpleModel, test, CNN
 
 
 class Server:
@@ -44,5 +44,6 @@ def server_fn(server_id: int) -> Server:
     :returns Server: A Server instance.
     """
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
-    model = SimpleModel().to(DEVICE)
+    # model = SimpleModel().to(DEVICE)
+    model = CNN().to(DEVICE)
     return Server(_server_id=server_id, _strategy=aggregator_strategy, _model=model)

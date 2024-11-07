@@ -61,20 +61,21 @@ def get_parameters(net) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 
-def client_fn(client_id: int, num_local_epochs: int, _dataset_name: str) -> Client:
+def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, _dataset_name: str) -> Client:
     """
     Create a client instances on demand for the optimal use of resources.
     :param client_id: client id
     :param num_local_epochs: number of local epochs, before being aggregation ready
+    :param mini_batch_size: size of the batches for the clients to train on
     :param _dataset_name: dataset name to load
     :returns Client: A Client instance.
     """
     # Load model
-    _model = SimpleModel().to(DEVICE)
-    # _model = CNN().to(DEVICE)
+    # _model = SimpleModel().to(DEVICE)
+    _model = CNN().to(DEVICE)
 
     # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
-    train_set, test_set = load_datasets(64, False, _dataset_name)
+    train_set, test_set = load_datasets(mini_batch_size, False, _dataset_name)
 
     # Create a  single Flower client representing a single organization
     return Client(client_id=client_id, model=_model, epochs=num_local_epochs, trainloader=train_set, valloader=test_set)
