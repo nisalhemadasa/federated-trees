@@ -25,6 +25,8 @@ TODO
 
 13. Run initial test with drift
 
+14. plot besidet the graph std deviation 
+
 
 
 
