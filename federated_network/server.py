@@ -34,6 +34,7 @@ class Server:
         :return: loss and accuracy
         """
         loss, accuracy = test(self.server_model, _test_set)
+        print("server Eval: : loss: " + str(loss) + " accuracy: " + str(accuracy))
         return float(loss), float(accuracy)
 
 

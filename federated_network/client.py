@@ -44,11 +44,12 @@ class Client:
         # Train the client model using new data and server parameters
         train(self.model, self.trainloader, epochs=self.epochs)
 
-        return get_parameters(self.model), len(self.trainloader), {}
+        return get_parameters(self.model), len(self.trainloader)
 
     def evaluate(self):
         """ Evaluate the client model on the validation data and return the loss and accuracy """
         loss, accuracy = test(self.model, self.valloader)
+        print("client_id Eval: " + str(self.client_id) + ": loss: " + str(loss) + " accuracy: " + str(accuracy))
         return float(loss), float(accuracy)
 
 

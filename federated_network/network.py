@@ -73,9 +73,11 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server) -> L
         if client.client_id in _sampled_client_ids:
             # if the model is sampled, then train using the server aggregated parameters
             client.fit(_server.server_model.state_dict())
+            print("client_id: " + str(client.client_id))
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
+            print("client_id: " + str(client.client_id))
 
         # Evaluate the client model after training
         round_client_loss_and_accuracy.append(client.evaluate())
@@ -96,7 +98,7 @@ def update_progress(_round, _num_training_rounds) -> None:
 
 class FederatedNetwork:
     def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name, drift_specs,
-                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=10):
+                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4):
         # Dataset name
         self.dataset_name = dataset_name
 

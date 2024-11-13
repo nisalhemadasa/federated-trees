@@ -45,6 +45,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
         self.fc1 = nn.Linear(64 * 5 * 5, 128)
         self.fc2 = nn.Linear(128, 10)
+        self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
         x = torch.relu(self.conv1(x))
@@ -53,12 +54,13 @@ class CNN(nn.Module):
         x = torch.max_pool2d(x, kernel_size=2, stride=2)
         x = x.view(-1, 64 * 5 * 5)
         x = torch.relu(self.fc1(x))
+        x = self.dropout(x)
         x = self.fc2(x)
-        return x
-        # return torch.log_softmax(x, dim=1)
+        # return x
+        return torch.log_softmax(x, dim=1)
 
 
-def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False) -> None:
+def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=True) -> None:
     """
     Train the network on the training set.
     :param _model: The model to train
@@ -104,7 +106,7 @@ def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False
         epoch_loss /= len(_dataloader)
         epoch_acc = correct / total
         if verbose:
-            print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
+            print(f"Train Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
 
 def test(_model, _dataset) -> Tuple[float, float]:
