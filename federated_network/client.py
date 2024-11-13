@@ -76,7 +76,7 @@ def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, _data
     _model = CNN().to(DEVICE)
 
     # Each client gets a different dataloaders, so each client will train and evaluate on their own unique data
-    train_set, test_set = load_datasets(mini_batch_size, False, _dataset_name)
+    train_set, test_set = load_datasets(mini_batch_size, True, _dataset_name)
 
     # Create a  single Flower client representing a single organization
     return Client(client_id=client_id, model=_model, epochs=num_local_epochs, trainloader=train_set, valloader=test_set)

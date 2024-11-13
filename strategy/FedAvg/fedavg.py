@@ -5,16 +5,11 @@ Author: Nisal Hemadasa
 Date: 19-10-2024
 Version: 1.0
 """
-from typing import List, Tuple
 
 import torch
-from flwr.common import Metrics
-# from flwr.server.strategy import FedAvg
-
-import strategy
 
 
-class FedAvg():
+class FedAvg:
     def __init__(self):
         pass
 

@@ -145,7 +145,7 @@ class FederatedNetwork:
         clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
         # Load the test set for server evaluation
-        _, server_test_set = load_datasets(self.minibatch_size, False, self.dataset_name)
+        _, server_test_set = load_datasets(self.minibatch_size, True, self.dataset_name)
 
         for _round in range(self.num_training_rounds):
             # Add drift to the clients, if within the drift period
