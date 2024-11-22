@@ -9,15 +9,8 @@ Version: 1.0
 
 # Directory paths related to datasets
 class Paths:
-    # path to download the datasets
-    MNIST_DATA_DOWNLOAD = './MNIST_data/'
-    F_MNIST_DATA_DOWNLOAD = './F_MNIST_data/'
-    CIFAR_10_DATA_DOWNLOAD = './CIFAR10_data/'
-
-    # path to read the already downloaded datasets
-    MNIST_DATA_READ = 'data/MNIST_data/MNIST/raw/'
-    F_MNIST_DATA_READ = 'data/F_MNIST_data/FashionMNIST/raw/'
-    CIFAR_10_DATA_READ = 'data/CIFAR10_data/'
+    # path to download and read the datasets
+    DATASET = 'data/'
 
     # path related to saved plots
     PLOT_SAVE_PATH = './plots/saved_plots/'

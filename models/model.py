@@ -78,8 +78,17 @@ def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=True)
         correct, total, epoch_loss = 0, 0, 0.0
         # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types.
         # Also takes batches of data from the dataset and trains the model
-        for _x, _y in _dataloader:
-            inputs = _x.unsqueeze(1).float()  # Ensure images are in the right format and shape to feed to the model
+
+        # Define the maximum number of batches to use per epoch
+        max_batches_per_epoch = 10
+
+        # Limit the loop to a fixed number of batches
+        for batch_idx, (_x, _y) in enumerate(_dataloader):
+            if batch_idx >= max_batches_per_epoch:
+                break
+
+            # inputs = _x.unsqueeze(1).float()  # Ensure images are in the right format and shape to feed to the model
+            inputs = _x
             labels = _y
 
             inputs = inputs.to(DEVICE)  # move inputs to device
@@ -123,7 +132,8 @@ def test(_model, _dataset) -> Tuple[float, float]:
     with torch.no_grad():
         # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types
         for _x, _y in _dataset:
-            inputs = _x.unsqueeze(1).float()   # Ensure images are in the right format and shape to feed to the model
+            # inputs = _x.unsqueeze(1).float()   # Ensure images are in the right format and shape to feed to the model
+            inputs = _x
             labels = _y
 
             # forward pass

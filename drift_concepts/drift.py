@@ -10,7 +10,6 @@ from typing import Dict, List
 
 import torch
 from scipy.ndimage import rotate
-from torch.utils.data import DataLoader, TensorDataset
 
 import constants
 from federated_network.client import Client

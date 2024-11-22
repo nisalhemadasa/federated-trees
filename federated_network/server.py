@@ -7,6 +7,8 @@ Version: 1.0
 """
 from typing import List, OrderedDict
 
+from torch.utils.data import DataLoader
+
 import strategy
 from data.dataset_loader import load_datasets
 from federated_network.client import DEVICE
@@ -27,7 +29,7 @@ class Server:
         """
         self.server_model = self.strategy.aggregate_models(self.server_model, client_model_parameters)
 
-    def evaluate(self, _test_set) -> (float, float):
+    def evaluate(self, _test_set: DataLoader) -> (float, float):
         """
         Evaluate the server model using the validation data.
         :param _test_set: test data
