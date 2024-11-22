@@ -11,7 +11,8 @@ import os
 
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset, DataLoader
+from torch.utils import data
+from torch.utils.data import Dataset, DataLoader, random_split, Subset
 from torchvision.datasets.mnist import read_image_file, read_label_file
 from torchvision import transforms
 
@@ -39,17 +40,27 @@ class CustomDataset(Dataset):
         else:
             image = self.transform(image)
 
-            # if self.transform:
-        #     image = self.transform(image)
-
         return image, label
 
 
-def convert_dataset_to_loader(_dataset: Tuple[Tensor, Tensor], _batch_size: int) -> DataLoader:
+def convert_dataset_to_loader(_dataset: data, _batch_size: int, _is_shuffle: bool = True) -> DataLoader:
     """
     Converts the Dataset object to DataLoader object.
-    :param _dataset: Dataset object that needs to be converted to DataLoader object.
+    :param _dataset: Dataset (torch.utils.data objects) object that needs to be converted to DataLoader object.
     :param _batch_size: batch size of loading data. i.e., not all the data available in the dataset is returned.
+    :param _is_shuffle: whether to shuffle the data or not.
+    :return: DataLoader object.
+    """
+    return DataLoader(_dataset, batch_size=_batch_size, shuffle=_is_shuffle)
+
+
+def convert_custom_dataset_to_loader(_dataset: Tuple[Tensor, Tensor], _batch_size: int,
+                                     _is_shuffle: bool) -> DataLoader:
+    """
+    Converts the CustomDataset object to DataLoader object.
+    :param _dataset: Input data and labels that needs to be converted to DataLoader object.
+    :param _batch_size: batch size of loading data. i.e., not all the data available in the dataset is returned.
+    :param _is_shuffle: whether to shuffle the data or not.
     :return: DataLoader object.
     """
     # Assuming grayscale, update for RGB in 'transforms.Normalize', if necessary
@@ -58,30 +69,47 @@ def convert_dataset_to_loader(_dataset: Tuple[Tensor, Tensor], _batch_size: int)
 
     # Wrap the image and label data in a Dataset and create a dataloader
     dataset = CustomDataset(images=_dataset[0], labels=_dataset[1], transform=transform_mnist)
-    dataloader = DataLoader(dataset, batch_size=_batch_size, shuffle=True)
 
-    return dataloader
+    return DataLoader(dataset, batch_size=_batch_size, shuffle=_is_shuffle)
 
 
-def get_loaders_from_datasets(_dataset_dir: str, _dataset_filename: constants.DatasetFileNames,
-                              _dataset_name: str, _batch_size: int) -> \
-        List[DataLoader]:
+def read_datasets(_dataset_dir: str, _dataset_filename: constants.DatasetFileNames,
+                  _dataset_name: str, _batch_size: int) -> List[Tuple[Tensor, Tensor]]:
     """
-    Reads and converts the saved datasets to DataLoader objects.
+    Reads and returns datasets.
     :param _dataset_dir: directory where the dataset is stored.
     :param _dataset_filename: constants.MNISTFilesNames object that contains the filename of the dataset.
     :param _dataset_name: name of the dataset.
     :param _batch_size: batch size of loading data. i.e., not all the data available in the dataset is returned.
-    :return: List of DataLoader objects.
+    :return: Dataset as a list of Tuples of Tensors.
     """
 
-    training_set = (
+    trainset = (
         read_image_file(os.path.join(_dataset_dir, _dataset_filename.get_train_images(_dataset_name)[0])),
         read_label_file(os.path.join(_dataset_dir, _dataset_filename.get_train_labels(_dataset_name)[0])),
     )
-    test_set = (
+    testset = (
         read_image_file(os.path.join(_dataset_dir, _dataset_filename.get_test_images(_dataset_name)[0])),
         read_label_file(os.path.join(_dataset_dir, _dataset_filename.get_test_labels(_dataset_name)[0]))
     )
 
-    return [convert_dataset_to_loader(training_set, _batch_size), convert_dataset_to_loader(test_set, _batch_size)]
+    return [trainset, testset]
+
+
+def split_dataset(_dataset: Dataset, _num_partitions: int) -> List[Subset]:
+    """
+    Splits the dataset into mutually exclusive partitions (Dataset -> Subset).
+    :param _dataset: Dataset that needs to be split.
+    :param _num_partitions: Number of partitions to split the dataset.
+    :return: None
+    """
+    partition_size = len(_dataset) // _num_partitions  # Compute size of each partition
+    partition_lengths = [partition_size] * _num_partitions  # Create a list; value=partition_size, length=num_partitions
+
+    # Randomly split the training dataset into partitions
+    split_datasets = random_split(_dataset, partition_lengths)
+    client_indices = [subset.indices for subset in split_datasets]
+
+    # Create subsets based on the indices of the split datasets
+    return [Subset(_dataset, indices) for indices in client_indices]
+

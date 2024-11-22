@@ -6,9 +6,13 @@ Date: 19-10-2024
 Version: 1.0
 """
 import random
+import time
 from typing import List, OrderedDict
 
+from torch.utils.data import DataLoader
+
 from data.dataset_loader import load_datasets
+from data.utils import split_dataset, convert_dataset_to_loader
 from drift_concepts.drift import drift_fn, apply_drift
 from federated_network.client import client_fn, Client
 from federated_network.server import server_fn, Server
@@ -16,7 +20,7 @@ from plots.plotting import plot_client_performance_vs_rounds, plot_server_perfor
 
 
 def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
-                            _server_test_set: List) -> List:
+                            _server_test_set: DataLoader) -> List:
     """
     Aggregate the models of the clients to the server model.
     :param _server_hierarchy: List of servers in the hierarchy
@@ -53,6 +57,7 @@ def client_initial_training(_clients: List[Client]) -> List:
     initial_client_loss_and_accuracy = []
     # All the clients are trained individually using local data initially
     for client in _clients:
+        client.sample_data()
         client.fit(None)
         initial_client_loss_and_accuracy.append(client.evaluate())
 
@@ -70,12 +75,17 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server) -> L
     round_client_loss_and_accuracy = []
 
     for client in _all_clients:
+        # Each client samples data for local training from their mutually own (exclusively partitioned) datasets
+        client.sample_data()
+
         if client.client_id in _sampled_client_ids:
-            # if the model is sampled, then train using the server aggregated parameters
+            # If the client is sampled in this global training round, then train using the server aggregated parameters
             client.fit(_server.server_model.state_dict())
+            print("client_id: " + str(client.client_id))
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
+            print("client_id: " + str(client.client_id))
 
         # Evaluate the client model after training
         round_client_loss_and_accuracy.append(client.evaluate())
@@ -96,7 +106,7 @@ def update_progress(_round, _num_training_rounds) -> None:
 
 class FederatedNetwork:
     def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name, drift_specs,
-                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=10):
+                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4):
         # Dataset name
         self.dataset_name = dataset_name
 
@@ -112,9 +122,19 @@ class FederatedNetwork:
         # Number of training rounds
         self.num_training_rounds = num_training_rounds
 
-        # Create client instances
+        # Number of client instances
         self.num_client_instances = num_client_instances
-        self.clients = [client_fn(i, self.num_local_epochs, self.dataset_name) for i in range(num_client_instances)]
+
+        # Load the dataset
+        self.trainset, self.testset = load_datasets(dataset_name)
+
+        # Partition the train set (only the train set) into subsets for each client
+        partitioned_datasets = split_dataset(self.trainset, self.num_client_instances)
+
+        # Create client instances
+        self.clients = [
+            client_fn(i, self.num_local_epochs, self.minibatch_size, [partitioned_datasets[i], self.testset]) for
+            i in range(num_client_instances)]
 
         # Concept drift properties
         self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
@@ -137,12 +157,15 @@ class FederatedNetwork:
         sampled_clients_in_each_round = []  # To keep track of the client IDs sampled in each round
         server_loss_and_accuracy = []  # Store the loss and accuracy at each level of the server hierarchy
 
+        # Start the timer
+        start_time = time.time()
+
         # Train the clients initially using their local data
         initial_client_loss_and_accuracy = client_initial_training(self.clients)
         clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
         # Load the test set for server evaluation
-        _, server_test_set = load_datasets(self.minibatch_size, False, self.dataset_name)
+        server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
 
         for _round in range(self.num_training_rounds):
             # Add drift to the clients, if within the drift period
@@ -175,6 +198,11 @@ class FederatedNetwork:
 
             # Update the progress of the simulation
             update_progress(_round=_round + 1, _num_training_rounds=self.num_training_rounds)
+
+        # Stop the timer
+        end_time = time.time()
+
+        print(f"Runtime: {end_time - start_time} seconds")
 
         # Plot the performance of the clients
         plot_client_performance_vs_rounds(clients_loss_and_accuracy)

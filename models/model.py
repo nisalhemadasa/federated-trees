@@ -45,6 +45,7 @@ class CNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
         self.fc1 = nn.Linear(64 * 5 * 5, 128)
         self.fc2 = nn.Linear(128, 10)
+        self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
         x = torch.relu(self.conv1(x))
@@ -53,11 +54,13 @@ class CNN(nn.Module):
         x = torch.max_pool2d(x, kernel_size=2, stride=2)
         x = x.view(-1, 64 * 5 * 5)
         x = torch.relu(self.fc1(x))
+        x = self.dropout(x)
         x = self.fc2(x)
+        # return x
         return torch.log_softmax(x, dim=1)
 
 
-def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False) -> None:
+def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=True) -> None:
     """
     Train the network on the training set.
     :param _model: The model to train
@@ -66,18 +69,27 @@ def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False
     :param verbose: Whether to print training progress
     :return: None
     """
-    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.BCELoss()
-    # criterion = torch.nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
     _optimizer = torch.optim.Adam(_model.parameters(), lr=0.001)
     _model.train()
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
         # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types.
         # Also takes batches of data from the dataset and trains the model
-        for _x, _y in _dataloader:
-            inputs = _x.float()  # _x is already a tensor, no need for conversion
-            labels = _y.unsqueeze(1).float()  # Ensure labels are in the right format
+
+        # Define the maximum number of batches to use per epoch
+        max_batches_per_epoch = 10
+
+        # Limit the loop to a fixed number of batches
+        for batch_idx, (_x, _y) in enumerate(_dataloader):
+            if batch_idx >= max_batches_per_epoch:
+                break
+
+            # inputs = _x.unsqueeze(1).float()  # Ensure images are in the right format and shape to feed to the model
+            inputs = _x
+            labels = _y
 
             inputs = inputs.to(DEVICE)  # move inputs to device
             labels = labels.to(DEVICE)  # move labels to device
@@ -96,14 +108,14 @@ def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False
             _optimizer.step()
 
             # Metrics
-            epoch_loss += _loss
+            epoch_loss += _loss.item()
             total += labels.size(0)
             correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
 
         epoch_loss /= len(_dataloader)
         epoch_acc = correct / total
         if verbose:
-            print(f"Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
+            print(f"Train Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
 
 def test(_model, _dataset) -> Tuple[float, float]:
@@ -113,14 +125,16 @@ def test(_model, _dataset) -> Tuple[float, float]:
     :param _dataset: The test dataset
     :return: Tuple of loss and accuracy
     """
-    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss()
     correct, total, loss = 0, 0, 0.0
     _model.eval()
     with torch.no_grad():
         # this loop is added because _dataset is dictionary like and torch.from_numpy() expects only Dataloader types
         for _x, _y in _dataset:
-            inputs = _x.float()  # _x is already a tensor, no need for conversion
-            labels = _y.unsqueeze(1).float()  # Ensure labels are in the right format
+            # inputs = _x.unsqueeze(1).float()   # Ensure images are in the right format and shape to feed to the model
+            inputs = _x
+            labels = _y
 
             # forward pass
             outputs = _model(inputs)
