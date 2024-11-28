@@ -14,15 +14,15 @@ def main():
     # drift = Drift()
     # Define the drift specifications
     drift_specifications = dict(
-        clients_fraction=0.5,
+        clients_fraction=0.75,
         # Fraction of clients that are affected by the drift (literature also uses a list of fractions)
         is_synchronous=True,  # If the drift is synchronous or asynchronous
-        drift_pattern=constants.DriftPatterns.GRADUAL,  # Drift pattern, i.e., abrupt, gradual, etc.
-        drift_method=constants.DriftCreationMethods.ROTATION,
+        drift_pattern=constants.DriftPatterns.ABRUPT,  # Drift pattern, i.e., abrupt, gradual, etc.
+        drift_method=constants.DriftCreationMethods.LABEL_SWAPPING,
         # Drift creation method, i.e., label-swapping, rotations
-        drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds
-        drift_end_round=0.9,  # Round at which the drift ends as a fraction of the total number of rounds
-        max_rotation=45,  # Maximum rotation angle for the drift created by rotations
+        drift_start_round=0.55,  # Round at which the drift starts as a fraction of the total number of rounds
+        drift_end_round=0.75,  # Round at which the drift ends as a fraction of the total number of rounds
+        max_rotation=90,  # Maximum rotation angle for the drift created by rotations
         class_pairs_to_swap=[(1, 2), (5, 6)],  # Classes to be swapped in the label-swapping drift method
     )
 
@@ -36,6 +36,7 @@ def main():
         # drift_specs=None # Drift specifications
         drift_specs=drift_specifications,  # Drift specifications
         # drift=drift  # Drift object
+        client_select_fraction=1    # Fraction of clients to be selected for each round
     )
 
     # Running the simulation

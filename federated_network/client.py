@@ -65,7 +65,6 @@ class Client:
     def evaluate(self):
         """ Evaluate the client model on the validation data and return the loss and accuracy """
         loss, accuracy = test(self.model, self.testloader)
-        print("client_id Eval: " + str(self.client_id) + ": loss: " + str(loss) + " accuracy: " + str(accuracy))
         return float(loss), float(accuracy)
 
 

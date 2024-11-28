@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from data.dataset_loader import load_datasets
 from data.utils import split_dataset, convert_dataset_to_loader
 from drift_concepts.drift import drift_fn, apply_drift
-from federated_network.client import client_fn, Client
+from federated_network.client import client_fn, Client, set_parameters
 from federated_network.server import server_fn, Server
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
 
@@ -79,13 +79,16 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server) -> L
         client.sample_data()
 
         if client.client_id in _sampled_client_ids:
+            # set_parameters(client.model, _server.server_model.state_dict())
+            # round_client_loss_and_accuracy.append(client.evaluate())
+
             # If the client is sampled in this global training round, then train using the server aggregated parameters
             client.fit(_server.server_model.state_dict())
-            print("client_id: " + str(client.client_id))
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
-            print("client_id: " + str(client.client_id))
+
+            # round_client_loss_and_accuracy.append(client.evaluate())
 
         # Evaluate the client model after training
         round_client_loss_and_accuracy.append(client.evaluate())
@@ -128,13 +131,14 @@ class FederatedNetwork:
         # Load the dataset
         self.trainset, self.testset = load_datasets(dataset_name)
 
-        # Partition the train set (only the train set) into subsets for each client
-        partitioned_datasets = split_dataset(self.trainset, self.num_client_instances)
+        # Partition the data set into subsets for each client
+        partitioned_trainsets = split_dataset(self.trainset, self.num_client_instances)
+        partitioned_testsets = split_dataset(self.testset, self.num_client_instances)
 
         # Create client instances
         self.clients = [
-            client_fn(i, self.num_local_epochs, self.minibatch_size, [partitioned_datasets[i], self.testset]) for
-            i in range(num_client_instances)]
+            client_fn(i, self.num_local_epochs, self.minibatch_size,
+                      [partitioned_trainsets[i], partitioned_testsets[i]]) for i in range(num_client_instances)]
 
         # Concept drift properties
         self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
@@ -171,7 +175,7 @@ class FederatedNetwork:
             # Add drift to the clients, if within the drift period
             if self.drift.drift_start_round < _round < self.drift.drift_end_round:
                 self.drift.current_round = _round
-                apply_drift(self.clients, self.drift)
+                self.clients = apply_drift(self.clients, self.drift)
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()

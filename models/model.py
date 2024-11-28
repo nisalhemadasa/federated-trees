@@ -60,7 +60,7 @@ class CNN(nn.Module):
         return torch.log_softmax(x, dim=1)
 
 
-def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=True) -> None:
+def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False) -> None:
     """
     Train the network on the training set.
     :param _model: The model to train
@@ -118,7 +118,7 @@ def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=True)
             print(f"Train Epoch {epoch + 1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
 
-def test(_model, _dataset) -> Tuple[float, float]:
+def test(_model: nn.Module, _dataset: DataLoader) -> Tuple[float, float]:
     """
     Evaluate the network on the entire test set.
     :param _model: The model to evaluate

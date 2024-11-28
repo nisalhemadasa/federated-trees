@@ -54,7 +54,7 @@ def convert_dataset_to_loader(_dataset: data, _batch_size: int, _is_shuffle: boo
     return DataLoader(_dataset, batch_size=_batch_size, shuffle=_is_shuffle)
 
 
-def convert_custom_dataset_to_loader(_dataset: Tuple[Tensor, Tensor], _batch_size: int,
+def convert_custom_dataset_to_loader(_dataset: List[Tensor, Tensor], _batch_size: int,
                                      _is_shuffle: bool) -> DataLoader:
     """
     Converts the CustomDataset object to DataLoader object.
@@ -112,4 +112,3 @@ def split_dataset(_dataset: Dataset, _num_partitions: int) -> List[Subset]:
 
     # Create subsets based on the indices of the split datasets
     return [Subset(_dataset, indices) for indices in client_indices]
-
