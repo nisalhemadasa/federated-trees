@@ -10,7 +10,6 @@ from typing import List, OrderedDict
 from torch.utils.data import DataLoader
 
 import strategy
-from data.dataset_loader import load_datasets
 from federated_network.client import DEVICE
 from models.model import SimpleModel, test, CNN
 
@@ -36,7 +35,6 @@ class Server:
         :return: loss and accuracy
         """
         loss, accuracy = test(self.server_model, _test_set)
-        print("server Eval: : loss: " + str(loss) + " accuracy: " + str(accuracy))
         return float(loss), float(accuracy)
 
 

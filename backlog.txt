@@ -21,11 +21,15 @@ TODO
 
 11. data heteogeneity: two dataset for the clients considering spatiality and temporality
 
-12. Test model accuracies
-
 13. Run initial test with drift
 
 14. plot besidet the graph std deviation 
+
+20. The rotation and swapping drift functions could be optimized
+
+21. test the drift functions using the new models 
+
+
 
 
 
@@ -50,4 +54,13 @@ DONE
 
 4. Creating concept drift functions for the image datasets
  4.1. controlled drift
+
+15. Update the data download paths
+16. Update data read paths
+17. simplify data read and download functions
+18. Create mutually exclusive train and test datasets 
+19. Pick a subset of shuffled data on each fed-training round
+
+12. Test model accuracies
+
 
