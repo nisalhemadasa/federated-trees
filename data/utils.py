@@ -106,6 +106,11 @@ def split_dataset(_dataset: Dataset, _num_partitions: int) -> List[Subset]:
     partition_size = len(_dataset) // _num_partitions  # Compute size of each partition
     partition_lengths = [partition_size] * _num_partitions  # Create a list; value=partition_size, length=num_partitions
 
+    # If the dataset cannot be evenly split into partitions, add the remaining data to the last partition. This is to
+    # avoid the possible runtime exception when calling random_split() function.
+    if len(_dataset) % _num_partitions != 0:
+        partition_lengths[-1] += len(_dataset) % _num_partitions
+
     # Randomly split the training dataset into partitions
     split_datasets = random_split(_dataset, partition_lengths)
     client_indices = [subset.indices for subset in split_datasets]
