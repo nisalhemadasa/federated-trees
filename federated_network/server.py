@@ -15,10 +15,11 @@ from models.model import SimpleModel, test, CNN
 
 
 class Server:
-    def __init__(self, _server_id, _strategy, _model):
+    def __init__(self, _server_id, _strategy, _model, _client_ids=None):
         self.server_id = _server_id
         self.strategy = _strategy
         self.server_model = _model
+        self.client_ids = []  # List of client IDs the server is connected to in the federated network
 
     def train(self, client_model_parameters: List[OrderedDict]) -> None:
         """

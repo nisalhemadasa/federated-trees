@@ -13,11 +13,35 @@ from torch.utils.data import DataLoader
 
 import constants
 from data.dataset_loader import load_datasets
-from data.utils import split_dataset, convert_dataset_to_loader
+from data.utils import split_dataset, convert_dataset_to_loader, equal_distribution
 from drift_concepts.drift import drift_fn, apply_drift, Drift
 from federated_network.client import client_fn, Client, set_parameters
 from federated_network.server import server_fn, Server
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
+
+
+def distribute_clients_to_servers(_servers: List[Server], _sampled_clients_model_parameters: List[OrderedDict]) -> None:
+    """
+    Determines how the distribution of the clients to the servers at the leaves of the hierarchy should be done.
+    :param _servers: List of servers at the leaves of the hierarchy
+    :param _sampled_clients_model_parameters: List of client model parameters
+    :return: None
+    """
+    # Distribute the clients to the servers according to a given ratio (e.g., equally, etc.)
+    num_clients = len(_sampled_clients_model_parameters)
+    num_servers = len(_servers)
+
+    # Get the distribution based on the strategy
+    client_distribution = equal_distribution(num_clients, num_servers)
+
+    if sum(client_distribution) != num_clients:
+        raise ValueError("The distribution strategy must allocate all clients.")
+
+    # Distribute clients to servers
+    client_id = 0
+    for i, server in enumerate(_servers):
+        server.client_ids = list(range(client_id, client_id + client_distribution[i]))
+        client_id += client_distribution[i]
 
 
 def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
@@ -181,12 +205,12 @@ class FederatedNetwork:
         server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
 
         for _round in range(self.num_training_rounds):
-            # Add drift to the clients, if within the drift period
-            if self.drift.drift_start_round < _round < self.drift.drift_end_round:
-                self.drift.current_round = _round
-                self.drift.is_drift = True
-            else:
-                self.drift.is_drift = False
+            # # Add drift to the clients, if within the drift period
+            # if self.drift.drift_start_round < _round < self.drift.drift_end_round:
+            #     self.drift.current_round = _round
+            #     self.drift.is_drift = True
+            # else:
+            #     self.drift.is_drift = False
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()
@@ -199,6 +223,7 @@ class FederatedNetwork:
 
             # As an example, only one server is considered
             sampled_clients_model_parameters = [sampled_client.model.state_dict() for sampled_client in sampled_clients]
+            distribute_clients_to_servers(self.server_hierarchy[0], sampled_clients_model_parameters)
 
             # Aggregate the models of the clients to the server model
             round_server_loss_and_accuracy = aggregate_client_models(self.server_hierarchy,
