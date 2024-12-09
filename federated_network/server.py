@@ -20,6 +20,8 @@ class Server:
         self.strategy = _strategy
         self.model = _model
         self.client_ids = []  # List of client IDs the server is connected to in the federated network
+        self.child_server_ids = []  # List of child server IDs in the server hierarchy
+        self.parent_server_id = None  # Parent server ID in the server hierarchy
 
     def train(self, client_model_parameters: List[OrderedDict]) -> None:
         """

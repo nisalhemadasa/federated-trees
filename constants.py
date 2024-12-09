@@ -107,3 +107,9 @@ class DriftPatterns:
 class DriftCreationMethods:
     LABEL_SWAPPING = 'label_swapping'
     ROTATION = 'rotation'
+
+
+# Server hierarchical structures
+class HierarchicalStructure:
+    STRICT_BINARY_TREE = 'strict_binary_tree'
+    RELAXED_BINARY_TREE = 'relaxed_binary_tree'

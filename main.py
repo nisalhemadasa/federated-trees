@@ -28,8 +28,8 @@ def main():
 
     # Create a federated network
     fed_net = FederatedNetwork(
-        num_client_instances=3,  # Number of clients in the federated network
-        server_tree_layout=[2, 1],  # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
+        num_client_instances=13,  # Number of clients in the federated network
+        server_tree_layout=[8, 3, 2, 1],  # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
         num_training_rounds=5,  # Number of training rounds (in literature, over 50 rounds are trained.
         # This is where the training accuracy begins to plateau without clustering)
         dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset

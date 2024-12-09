@@ -9,12 +9,14 @@ import random
 import time
 from typing import List
 
+import constants
 from data.dataset_loader import load_datasets
 from data.utils import split_dataset, convert_dataset_to_loader
 from drift_concepts.drift import drift_fn
-from federated_network.client import client_fn, Client, client_initial_training, train_client_models
+from federated_network.client import client_fn, Client, client_initial_training
 from federated_network.server import server_fn, aggregate_client_models
-from federated_network.utils import distribute_clients_to_servers, update_progress
+from federated_network.utils import distribute_clients_to_servers, update_progress, link_server_hierarchy, \
+    train_client_models
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
 
 
@@ -62,6 +64,12 @@ class FederatedNetwork:
             server_hierarchy.append(servers_at_level)
         self.server_hierarchy = server_hierarchy
 
+        # Link servers in the hierarchical structure
+        link_server_hierarchy(self.server_hierarchy, constants.HierarchicalStructure.RELAXED_BINARY_TREE)
+
+        # Distribute the clients to the leaf servers
+        distribute_clients_to_servers(self.server_hierarchy[0], self.num_client_instances)
+
     def sample_clients(self) -> List[Client]:
         """ Sample clients from the client pool and returns a list of client instances """
         return random.sample(self.clients, int(self.client_select_fraction * len(self.clients)))
@@ -101,7 +109,6 @@ class FederatedNetwork:
 
             # As an example, only one server is considered
             sampled_clients_model_parameters = [sampled_client.model.state_dict() for sampled_client in sampled_clients]
-            distribute_clients_to_servers(self.server_hierarchy[0], sampled_clients_model_parameters)
 
             # Aggregate the models of the clients to the server model
             round_server_loss_and_accuracy = aggregate_client_models(self.server_hierarchy,
