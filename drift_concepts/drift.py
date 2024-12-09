@@ -11,7 +11,6 @@ from typing import Dict, List
 
 import torch
 from scipy.ndimage import rotate
-from torch.utils.data import Dataset
 
 import constants
 from federated_network.client import Client
