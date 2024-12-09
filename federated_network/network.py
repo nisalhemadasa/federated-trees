@@ -7,137 +7,15 @@ Version: 1.0
 """
 import random
 import time
-from typing import List, OrderedDict
+from typing import List
 
-from torch.utils.data import DataLoader
-
-import constants
 from data.dataset_loader import load_datasets
-from data.utils import split_dataset, convert_dataset_to_loader, equal_distribution
-from drift_concepts.drift import drift_fn, apply_drift, Drift
-from federated_network.client import client_fn, Client, set_parameters
-from federated_network.server import server_fn, Server
+from data.utils import split_dataset, convert_dataset_to_loader
+from drift_concepts.drift import drift_fn
+from federated_network.client import client_fn, Client, client_initial_training, train_client_models
+from federated_network.server import server_fn, aggregate_client_models
+from federated_network.utils import distribute_clients_to_servers, update_progress
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
-
-
-def distribute_clients_to_servers(_servers: List[Server], _sampled_clients_model_parameters: List[OrderedDict]) -> None:
-    """
-    Determines how the distribution of the clients to the servers at the leaves of the hierarchy should be done.
-    :param _servers: List of servers at the leaves of the hierarchy
-    :param _sampled_clients_model_parameters: List of client model parameters
-    :return: None
-    """
-    # Distribute the clients to the servers according to a given ratio (e.g., equally, etc.)
-    num_clients = len(_sampled_clients_model_parameters)
-    num_servers = len(_servers)
-
-    # Get the distribution based on the strategy
-    client_distribution = equal_distribution(num_clients, num_servers)
-
-    if sum(client_distribution) != num_clients:
-        raise ValueError("The distribution strategy must allocate all clients.")
-
-    # Distribute clients to servers
-    client_id = 0
-    for i, server in enumerate(_servers):
-        server.client_ids = list(range(client_id, client_id + client_distribution[i]))
-        client_id += client_distribution[i]
-
-
-def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
-                            _server_test_set: DataLoader) -> List:
-    """
-    Aggregate the models of the clients to the server model.
-    :param _server_hierarchy: List of servers in the hierarchy
-    :param _sampled_clients_model_parameters: List of client model parameters
-    :param _server_test_set: List of test data for server model evaluation, once the aggregation is done
-    :return: List of loss and accuracy at each level of the server hierarchy
-    """
-    # Store the loss and accuracy at each level of the server model hierarchy
-    _server_loss_and_accuracy = []
-
-    # Aggregate the models of the clients to the server model
-    for depth_level in range(len(_server_hierarchy)):
-        loss_and_accuracy_at_level = []
-
-        for server in _server_hierarchy[depth_level]:
-            # Aggregate the models of the sampled clients to the server model
-            server.train(_sampled_clients_model_parameters)
-
-            # Evaluate server models on the test set
-            loss, accuracy = server.evaluate(_server_test_set)
-            loss_and_accuracy_at_level.append((loss, accuracy))
-
-        _server_loss_and_accuracy.append(loss_and_accuracy_at_level)
-
-    return _server_loss_and_accuracy
-
-
-def client_initial_training(_clients: List[Client]) -> List:
-    """
-    Train the clients initially using their local data.
-    :param _clients: List of client instances
-    :return:  List of loss and accuracy of each client after the initial training
-    """
-    initial_client_loss_and_accuracy = []
-    # All the clients are trained individually using local data initially
-    for client in _clients:
-        client.sample_data()
-        client.fit(None)
-        initial_client_loss_and_accuracy.append(client.evaluate())
-
-    return initial_client_loss_and_accuracy
-
-
-def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift) -> List:
-    """
-    Train the client models.
-    :param _all_clients: List of all client instances
-    :param _sampled_client_ids: List of sampled client IDs
-    :param _server: Server instance
-    :param _drift: Drift instance
-    :return: List of loss and accuracy of each client after training
-    """
-    round_client_loss_and_accuracy = []
-
-    # Apply drift to the clients
-    if _drift.is_drift:
-        # Sample data from the drift applied datasets
-        apply_drift(_all_clients, _drift)
-    else:
-        for client in _all_clients:
-            # Sample data from the original datasets
-            client.sample_data()
-
-    for client in _all_clients:
-        # client.sample_data()
-        if client.client_id in _sampled_client_ids:
-            set_parameters(client.model, _server.server_model.state_dict())
-            # round_client_loss_and_accuracy.append(client.evaluate())
-
-            # If the client is sampled in this global training round, then train using the server aggregated parameters
-            client.fit(_server.server_model.state_dict())
-        else:
-            # If the client is not sampled, perform local training without server parameters
-            client.fit(None)
-
-            # round_client_loss_and_accuracy.append(client.evaluate())
-
-        # Evaluate the client model after training
-        round_client_loss_and_accuracy.append(client.evaluate())
-
-    return round_client_loss_and_accuracy
-
-
-def update_progress(_round, _num_training_rounds) -> None:
-    """
-    Update the progress of the simulation
-    :param _round: Current simulation iteration number
-    :param _num_training_rounds: Total number of training rounds
-    :return: None
-    """
-    progress = (_round / _num_training_rounds) * 100
-    print(f"\rSimulation Percentage completed: {progress:.2f}%", end="")
 
 
 class FederatedNetwork:

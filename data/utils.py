@@ -118,16 +118,3 @@ def split_dataset(_dataset: Dataset, _num_partitions: int) -> List[Subset]:
     # Create subsets based on the indices of the split datasets
     return [Subset(_dataset, indices) for indices in client_indices]
 
-
-def equal_distribution(num_clients: int, num_servers: int) -> List[int]:
-    """
-    Distribute clients as evenly as possible across servers.
-    :param num_clients: Number of clients.
-    :param num_servers: Number of servers.
-    :return: List of integers representing the number of clients assigned to each server.
-    """
-    base_clients = num_clients // num_servers
-    extra_clients = num_clients % num_servers
-
-    # Distribute extra clients to the first few servers
-    return [base_clients + (1 if i < extra_clients else 0) for i in range(num_servers)]

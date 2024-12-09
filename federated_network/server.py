@@ -18,7 +18,7 @@ class Server:
     def __init__(self, _server_id, _strategy, _model, _client_ids=None):
         self.server_id = _server_id
         self.strategy = _strategy
-        self.server_model = _model
+        self.model = _model
         self.client_ids = []  # List of client IDs the server is connected to in the federated network
 
     def train(self, client_model_parameters: List[OrderedDict]) -> None:
@@ -27,7 +27,7 @@ class Server:
         :param client_model_parameters: List of client model parameters
         :return: None
         """
-        self.server_model = self.strategy.aggregate_models(self.server_model, client_model_parameters)
+        self.model = self.strategy.aggregate_models(self.model, client_model_parameters)
 
     def evaluate(self, _test_set: DataLoader) -> (float, float):
         """

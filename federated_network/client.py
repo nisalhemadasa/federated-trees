@@ -14,6 +14,8 @@ import torch
 from torch.utils.data import Dataset, Subset
 
 from data.utils import convert_dataset_to_loader
+from drift_concepts.drift import apply_drift, Drift
+from federated_network.server import Server
 from models.model import train, test, SimpleModel, CNN
 
 DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
@@ -81,6 +83,62 @@ def get_parameters(net) -> List[np.ndarray]:
     trainloader = convert_dataset_to_loader(_dataset=trainset, _batch_size=mini_batch_size)
     testloader = convert_dataset_to_loader(_dataset=testset, _batch_size=mini_batch_size, _is_shuffle=False)
     return trainloader, testloader
+
+
+def client_initial_training(_clients: List[Client]) -> List:
+    """
+    Train the clients initially using their local data.
+    :param _clients: List of client instances
+    :return:  List of loss and accuracy of each client after the initial training
+    """
+    initial_client_loss_and_accuracy = []
+    # All the clients are trained individually using local data initially
+    for client in _clients:
+        client.sample_data()
+        client.fit(None)
+        initial_client_loss_and_accuracy.append(client.evaluate())
+
+    return initial_client_loss_and_accuracy
+
+
+def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift) -> List:
+    """
+    Train the client models.
+    :param _all_clients: List of all client instances
+    :param _sampled_client_ids: List of sampled client IDs
+    :param _server: Server instance
+    :param _drift: Drift instance
+    :return: List of loss and accuracy of each client after training
+    """
+    round_client_loss_and_accuracy = []
+
+    # Apply drift to the clients
+    if _drift.is_drift:
+        # Sample data from the drift applied datasets
+        apply_drift(_all_clients, _drift)
+    else:
+        for client in _all_clients:
+            # Sample data from the original datasets
+            client.sample_data()
+
+    for client in _all_clients:
+        # client.sample_data()
+        if client.client_id in _sampled_client_ids:
+            set_parameters(client.model, _server.server_model.state_dict())
+            # round_client_loss_and_accuracy.append(client.evaluate())
+
+            # If the client is sampled in this global training round, then train using the server aggregated parameters
+            client.fit(_server.server_model.state_dict())
+        else:
+            # If the client is not sampled, perform local training without server parameters
+            client.fit(None)
+
+            # round_client_loss_and_accuracy.append(client.evaluate())
+
+        # Evaluate the client model after training
+        round_client_loss_and_accuracy.append(client.evaluate())
+
+    return round_client_loss_and_accuracy
 
 
 def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, _dataset: List[Dataset]) -> Client:
