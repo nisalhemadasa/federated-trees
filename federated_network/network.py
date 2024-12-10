@@ -65,7 +65,7 @@ class FederatedNetwork:
         self.server_hierarchy = server_hierarchy
 
         # Link servers in the hierarchical structure
-        link_server_hierarchy(self.server_hierarchy, constants.HierarchicalStructure.RELAXED_BINARY_TREE)
+        link_server_hierarchy(self.server_hierarchy)
 
         # Distribute the clients to the leaf servers
         distribute_clients_to_servers(self.server_hierarchy[0], self.num_client_instances)
