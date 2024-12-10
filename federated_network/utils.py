@@ -101,11 +101,11 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _dri
     for client in _all_clients:
         # client.sample_data()
         if client.client_id in _sampled_client_ids:
-            set_parameters(client.model, _server.server_model.state_dict())
+            set_parameters(client.model, _server.model.state_dict())
             # round_client_loss_and_accuracy.append(client.evaluate())
 
-            # If the client is sampled in this global training round, then train using the server aggregated parameters
-            client.fit(_server.server_model.state_dict())
+                # If the client is sampled in this global training round, then train using the server aggregated parameters
+            client.fit(_server.model.state_dict())
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)

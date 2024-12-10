@@ -91,12 +91,12 @@ class FederatedNetwork:
         server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
 
         for _round in range(self.num_training_rounds):
-            # # Add drift to the clients, if within the drift period
-            # if self.drift.drift_start_round < _round < self.drift.drift_end_round:
-            #     self.drift.current_round = _round
-            #     self.drift.is_drift = True
-            # else:
-            #     self.drift.is_drift = False
+            # Add drift to the clients, if within the drift period
+            if self.drift.drift_start_round < _round < self.drift.drift_end_round:
+                self.drift.current_round = _round
+                self.drift.is_drift = True
+            else:
+                self.drift.is_drift = False
 
             # Clients sampled for a single round
             sampled_clients = self.sample_clients()
