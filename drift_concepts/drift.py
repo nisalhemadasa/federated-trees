@@ -17,10 +17,14 @@ from federated_network.client import Client
 
 
 class Drift:
-    def __init__(self, num_drifted_clients, is_synchronous, drift_pattern, drift_method,
+    def __init__(self, num_drifted_clients, drift_localization_factor, is_synchronous, drift_pattern, drift_method,
                  drift_start_round, drift_end_round, drifted_client_indices, max_rotation, class_pairs_to_swap):
         # Number of clients to be applied with drifted data
         self.num_drifted_clients = num_drifted_clients
+
+        # Factor to localize the drift to a certain concentrated group of clients. The value ranges from 0 to 1. E.g.,
+        # 0.25 indicates that all drifted clients are concentrated to the first 0.25 indices of the clients.
+        self.drift_localization_factor = drift_localization_factor
 
         # If the drift is synchronous or asynchronous
         self.is_synchronous = is_synchronous
@@ -161,15 +165,19 @@ def swap_labels(self, clients: List[Client]) -> List[Client]:
     return clients
 
 
-def get_clients_with_drift(_num_client_instances: int, _clients_fraction_with_drift: float) -> list:
+def get_clients_with_drift(_num_client_instances: int, _clients_fraction_with_drift: float,
+                           drift_localization_factor: float) -> list:
     """
     Get the list of clients that have drifted data.
     :param _num_client_instances: Total number of client instances in the federated network
     :param _clients_fraction_with_drift: Fraction of clients with drifted data
+    :param drift_localization_factor: Factor to localize the drift to a certain concentrated group of clients
     :return: Indices of clients with drifted data
     """
-    num_clients_with_drift = int(_clients_fraction_with_drift * _num_client_instances)
-    client_indices = torch.randperm(_num_client_instances).tolist()
+    num_clients_with_drift = int(_clients_fraction_with_drift * _num_client_instances * drift_localization_factor)
+    # The cohort of clients with the possibility of drift occurrence
+    _num_client_cohort_with_drift = int(_num_client_instances * drift_localization_factor)
+    client_indices = torch.randperm(_num_client_cohort_with_drift).tolist()
     return client_indices[:num_clients_with_drift]
 
 
@@ -185,12 +193,14 @@ def drift_fn(num_client_instances: int, num_training_rounds: int, drift_specs: D
     print("Drift end round: ", math.ceil(drift_specs['drift_end_round'] * num_training_rounds))
 
     return Drift(num_drifted_clients=drift_specs['clients_fraction'] * num_client_instances,
+                 drift_localization_factor=drift_specs['drift_localization_factor'],
                  is_synchronous=drift_specs['is_synchronous'],
                  drift_pattern=drift_specs['drift_pattern'],
                  drift_method=drift_specs['drift_method'],
                  drift_start_round=math.ceil(drift_specs['drift_start_round'] * num_training_rounds),
                  drift_end_round=math.ceil(drift_specs['drift_end_round'] * num_training_rounds),
-                 drifted_client_indices=get_clients_with_drift(num_client_instances, drift_specs['clients_fraction']),
+                 drifted_client_indices=get_clients_with_drift(num_client_instances, drift_specs['clients_fraction'],
+                                                               drift_specs['drift_localization_factor']),
                  max_rotation=drift_specs['max_rotation'],
                  class_pairs_to_swap=drift_specs['class_pairs_to_swap'])
 

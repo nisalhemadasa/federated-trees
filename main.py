@@ -16,6 +16,7 @@ def main():
     drift_specifications = dict(
         clients_fraction=0.75,
         # Fraction of clients that are affected by the drift (literature also uses a list of fractions)
+        drift_localization_factor=0.5,  # Factor to localize the drift to a certain concentrated group of clients
         is_synchronous=True,  # If the drift is synchronous or asynchronous
         drift_pattern=constants.DriftPatterns.GRADUAL,  # Drift pattern, i.e., abrupt, gradual, etc.
         drift_method=constants.DriftCreationMethods.ROTATION,
@@ -29,7 +30,7 @@ def main():
     # Create a federated network
     fed_net = FederatedNetwork(
         num_client_instances=10,  # Number of clients in the federated network
-        server_tree_layout=[2, 1],  # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
+        server_tree_layout=[4, 2, 1],  # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
         num_training_rounds=20,  # Number of training rounds (in literature, over 50 rounds are trained.
         # This is where the training accuracy begins to plateau without clustering)
         dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset
