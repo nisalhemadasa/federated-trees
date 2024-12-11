@@ -78,13 +78,15 @@ def distribute_clients_to_servers(_leaf_servers: List[Server], num_clients: int)
         client_id += client_distribution[i]
 
 
-def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift) -> List:
+def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift,
+                        is_test_server_adaptability: bool) -> List:
     """
     Train the client models in the network while applying drift if necessary.
     :param _all_clients: List of all client instances
     :param _sampled_client_ids: List of sampled client IDs
     :param _server: Server instance
     :param _drift: Drift instance
+    :param is_test_server_adaptability: Boolean flag whether to test server adaptability or the client adaptability
     :return: List of loss and accuracy of each client after training
     """
     round_client_loss_and_accuracy = []
@@ -102,18 +104,23 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _dri
         # client.sample_data()
         if client.client_id in _sampled_client_ids:
             set_parameters(client.model, _server.model.state_dict())
-            # round_client_loss_and_accuracy.append(client.evaluate())
 
-                # If the client is sampled in this global training round, then train using the server aggregated parameters
+            if is_test_server_adaptability:
+                # Evalautes the adaptability of the server model to the data
+                round_client_loss_and_accuracy.append(client.evaluate())
+
+            # If the client is sampled in this global training round, then train using the server aggregated parameters
             client.fit(_server.model.state_dict())
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
 
-            # round_client_loss_and_accuracy.append(client.evaluate())
+            if is_test_server_adaptability:
+                round_client_loss_and_accuracy.append(client.evaluate())
 
-        # Evaluate the client model after training
-        round_client_loss_and_accuracy.append(client.evaluate())
+        if not is_test_server_adaptability:
+            # Evaluate the adaptability of the client models to the data
+            round_client_loss_and_accuracy.append(client.evaluate())
 
     return round_client_loss_and_accuracy
 
