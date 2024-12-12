@@ -9,7 +9,7 @@ from typing import List, OrderedDict
 
 import constants
 from drift_concepts.drift import apply_drift, Drift
-from federated_network.client import set_parameters
+from federated_network.client import set_parameters, Client
 from federated_network.server import Server
 
 
@@ -55,15 +55,17 @@ def link_server_hierarchy(server_hierarchy: List[List[Server]]) -> None:
                 child_index += 1
 
 
-def distribute_clients_to_servers(_leaf_servers: List[Server], num_clients: int) -> None:
+def link_clients_to_servers(leaf_servers: List[Server], clients: List[Client], num_clients: int) -> None:
     """
-    Determines how the distribution of the clients to the servers at the leaves of the hierarchy should be done.
-    :param _leaf_servers: List of servers at the leaves of the hierarchy
+    Determines how the distribution of the clients to the servers at the leaves of the hierarchy should be done. Then
+    links the servers to the clients accordingly.
+    :param leaf_servers: List of servers at the leaves of the hierarchy
+    :param clients: List of client instances
     :param num_clients: Number of clients
     :return: None
     """
     # Distribute the clients to the servers according to a given ratio (e.g., equally, etc.)
-    num_servers = len(_leaf_servers)
+    num_servers = len(leaf_servers)
 
     # Get the distribution based on the strategy
     client_distribution = equal_distribution(num_clients, num_servers)
@@ -73,44 +75,56 @@ def distribute_clients_to_servers(_leaf_servers: List[Server], num_clients: int)
 
     # Distribute clients to servers in a sequence of ascending order of client IDs
     client_id = 0
-    for i, server in enumerate(_leaf_servers):
+    for i, server in enumerate(leaf_servers):
         server.client_ids = list(range(client_id, client_id + client_distribution[i]))
+
+        # Assign the server ID to the respective clients to which they are connected to
+        for _id in server.client_ids:
+            clients[_id].parent_server_id = server.server_id
+
         client_id += client_distribution[i]
 
 
-def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift,
-                        is_test_server_adaptability: bool) -> List:
+def train_client_models(all_clients, sampled_client_ids, servers: List[Server], drift: Drift,
+                        is_test_server_adaptability: bool, is_download_from_root_server: bool) -> List:
     """
     Train the client models in the network while applying drift if necessary.
-    :param _all_clients: List of all client instances
-    :param _sampled_client_ids: List of sampled client IDs
-    :param _server: Server instance
-    :param _drift: Drift instance
+    :param all_clients: List of all client instances
+    :param sampled_client_ids: List of sampled client IDs
+    :param servers: List of Server instance at a given depth level
+    :param drift: Drift instance
     :param is_test_server_adaptability: Boolean flag whether to test server adaptability or the client adaptability
+    :param is_download_from_root_server: Boolean flag whether the client should download the model from the root server
     :return: List of loss and accuracy of each client after training
     """
     round_client_loss_and_accuracy = []
 
     # Apply drift to the clients
-    if _drift.is_drift:
+    if drift.is_drift:
         # Sample data from the drift applied datasets
-        apply_drift(_all_clients, _drift)
+        apply_drift(all_clients, drift)
     else:
-        for client in _all_clients:
+        for client in all_clients:
             # Sample data from the original datasets
             client.sample_data()
 
-    for client in _all_clients:
-        # client.sample_data()
-        if client.client_id in _sampled_client_ids:
-            set_parameters(client.model, _server.model.state_dict())
+    for client in all_clients:
+        if is_download_from_root_server:
+            # Get the root server
+            server = servers[0]
+        else:
+            # Get the server to which the client is connected
+            server = servers[client.parent_server_id]
+
+        if client.client_id in sampled_client_ids:
+            set_parameters(client.model, server.model.state_dict())
 
             if is_test_server_adaptability:
                 # Evalautes the adaptability of the server model to the data
                 round_client_loss_and_accuracy.append(client.evaluate())
 
             # If the client is sampled in this global training round, then train using the server aggregated parameters
-            client.fit(_server.model.state_dict())
+            client.fit(server.model.state_dict())
         else:
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
@@ -125,12 +139,12 @@ def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _dri
     return round_client_loss_and_accuracy
 
 
-def update_progress(_round, _num_training_rounds) -> None:
+def update_progress(_round, num_training_rounds) -> None:
     """
     Update the progress of the simulation
     :param _round: Current simulation iteration number
-    :param _num_training_rounds: Total number of training rounds
+    :param num_training_rounds: Total number of training rounds
     :return: None
     """
-    progress = (_round / _num_training_rounds) * 100
+    progress = (_round / num_training_rounds) * 100
     print(f"\rSimulation Percentage completed: {progress:.2f}%", end="")
