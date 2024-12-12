@@ -33,6 +33,7 @@ class Client:
         self.mini_batch_size = mini_batch_size
         self.trainloader = None  # initialized only when sample_data() is called
         self.testloader = None  # initialized only when sample_data() is called
+        self.parent_server_id = None  # server ID in the server hierarchy to which the client is connected
 
     def get_model_weights(self):
         """ Get the model weights and biases """

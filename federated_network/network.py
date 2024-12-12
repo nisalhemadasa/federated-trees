@@ -15,14 +15,13 @@ from data.utils import split_dataset, convert_dataset_to_loader
 from drift_concepts.drift import drift_fn
 from federated_network.client import client_fn, Client, client_initial_training
 from federated_network.server import server_fn, aggregate_client_models
-from federated_network.utils import distribute_clients_to_servers, update_progress, link_server_hierarchy, \
-    train_client_models
+from federated_network.utils import update_progress, link_server_hierarchy, train_client_models, link_clients_to_servers
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
 
 
 class FederatedNetwork:
     def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name, drift_specs,
-                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4, is_test_server_adaptability=False):
+                 simulation_parameters, client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4):
         # Dataset name
         self.dataset_name = dataset_name
 
@@ -56,6 +55,9 @@ class FederatedNetwork:
         # Concept drift properties
         self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
 
+        # Simulation parameters
+        self.simulation_parameters = simulation_parameters
+
         # Create instances for servers at each level of the server tree
         server_hierarchy = []
         for depth_level in range(len(server_tree_layout)):
@@ -68,10 +70,7 @@ class FederatedNetwork:
         link_server_hierarchy(self.server_hierarchy)
 
         # Distribute the clients to the leaf servers
-        distribute_clients_to_servers(self.server_hierarchy[0], self.num_client_instances)
-
-        # Whether to tests the adaptability of servers or clients to the data/drift distribution
-        self.is_test_server_adaptability = is_test_server_adaptability
+        link_clients_to_servers(self.server_hierarchy[0], self.clients, self.num_client_instances)
 
     def sample_clients(self) -> List[Client]:
         """ Sample clients from the client pool and returns a list of client instances """
@@ -120,15 +119,25 @@ class FederatedNetwork:
             server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Implement local training for every client and evaluate the client models
-            server_root_index = len(self.server_hierarchy) - 1
-            round_client_loss_and_accuracy = train_client_models(self.clients, sampled_client_ids,
-                                                                 self.server_hierarchy[server_root_index][0],
+            if self.simulation_parameters['is_download_from_root_server']:
+                # If the clients download the model from the root server of the hierarchy
+                server_depth = len(self.server_hierarchy) - 1
+            else:
+                # If the clients download the model from the leaf servers of the hierarchy
+                server_depth = 0
+
+            round_client_loss_and_accuracy = train_client_models(self.clients,
+                                                                 sampled_client_ids,
+                                                                 self.server_hierarchy[server_depth],
                                                                  self.drift,
-                                                                 self.is_test_server_adaptability)
+                                                                 self.simulation_parameters[
+                                                                     'is_server_adaptability'],
+                                                                 self.simulation_parameters[
+                                                                     'is_download_from_root_server'])
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
 
             # Update the progress of the simulation
-            update_progress(_round=_round + 1, _num_training_rounds=self.num_training_rounds)
+            update_progress(_round=_round + 1, num_training_rounds=self.num_training_rounds)
 
         # Stop the timer
         end_time = time.time()
