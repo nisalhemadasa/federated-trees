@@ -121,7 +121,7 @@ def train_client_models(all_clients, sampled_client_ids, servers: List[Server], 
             set_parameters(client.model, server.model.state_dict())
 
             if is_server_adaptability:
-                # Evalautes the adaptability of the server model to the data
+                # Evaluates the adaptability of the server model to the data
                 round_client_loss_and_accuracy.append(client.evaluate())
 
             # If the client is sampled in this global training round, then train using the server aggregated parameters

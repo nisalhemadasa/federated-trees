@@ -29,6 +29,7 @@ def main():
     simulation_parameters = dict(
         is_server_adaptability=False,  # Evaluate the adaptability of servers/clients to the data/drift distribution
         is_download_from_root_server=False,  # Downloads the model from the root server of the server hierarchy
+        is_server_downward_aggregation=False,  # Aggregates the server models along the downward links
     )
 
     # Create a federated network

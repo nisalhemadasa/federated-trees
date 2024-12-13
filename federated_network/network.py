@@ -14,7 +14,7 @@ from data.dataset_loader import load_datasets
 from data.utils import split_dataset, convert_dataset_to_loader
 from drift_concepts.drift import drift_fn
 from federated_network.client import client_fn, Client, client_initial_training
-from federated_network.server import server_fn, aggregate_client_models
+from federated_network.server import server_fn, aggregate_client_models, downward_link_aggregate_server_models
 from federated_network.utils import update_progress, link_server_hierarchy, train_client_models, link_clients_to_servers
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
 
@@ -117,6 +117,13 @@ class FederatedNetwork:
                                                                      sampled_clients_model_parameters,
                                                                      server_test_set)
             server_loss_and_accuracy.append(round_server_loss_and_accuracy)
+
+            # Server downward-aggregator-link
+            if self.simulation_parameters['is_server_downward_aggregation']:
+                round_server_loss_and_accuracy = downward_link_aggregate_server_models(self.server_hierarchy,
+                                                                         sampled_clients_model_parameters,
+                                                                         server_test_set)
+                server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Implement local training for every client and evaluate the client models
             if self.simulation_parameters['is_download_from_root_server']:

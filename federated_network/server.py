@@ -41,26 +41,26 @@ class Server:
         return float(loss), float(accuracy)
 
 
-def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
-                            _server_test_set: DataLoader) -> List:
+def aggregate_client_models(server_hierarchy: List[List[Server]], sampled_clients_model_parameters: List[OrderedDict],
+                            server_test_set: DataLoader) -> List:
     """
     Aggregate the models of the clients to the server model.
-    :param _server_hierarchy: List of servers in the hierarchy
-    :param _sampled_clients_model_parameters: List of client model parameters
-    :param _server_test_set: List of test data for server model evaluation, once the aggregation is done
+    :param server_hierarchy: List of servers in the hierarchy
+    :param sampled_clients_model_parameters: List of client model parameters
+    :param server_test_set: List of test data for server model evaluation, once the aggregation is done
     :return: List of loss and accuracy at each level of the server hierarchy
     """
     # Store the loss and accuracy at each level of the server model hierarchy
-    _server_loss_and_accuracy = []
+    server_loss_and_accuracy = []
 
     # Aggregate the models of the clients to the server model
-    for depth_level in range(len(_server_hierarchy)):
+    for depth_level in range(len(server_hierarchy)):
         loss_and_accuracy_at_level = []
 
-        for server in _server_hierarchy[depth_level]:
+        for server in server_hierarchy[depth_level]:
             if depth_level == 0:
                 # Leaf nodes: Aggregate client models
-                client_model_parameters = [_sampled_clients_model_parameters[client_id] for client_id in
+                client_model_parameters = [sampled_clients_model_parameters[client_id] for client_id in
                                            server.client_ids]
 
                 # Aggregate client models
@@ -68,18 +68,51 @@ def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clie
             else:
                 # Internal nodes: Aggregate models from child servers
                 child_server_model_parameters = [child_server.model.state_dict() for child_server in
-                                                 _server_hierarchy[depth_level - 1]]
+                                                 server_hierarchy[depth_level - 1]]
 
                 # Aggregate child server models
                 server.train(child_server_model_parameters)
 
             # Evaluate the server model
-            loss, accuracy = server.evaluate(_server_test_set)
+            loss, accuracy = server.evaluate(server_test_set)
             loss_and_accuracy_at_level.append((loss, accuracy))
 
-        _server_loss_and_accuracy.append(loss_and_accuracy_at_level)
+        server_loss_and_accuracy.append(loss_and_accuracy_at_level)
 
-    return _server_loss_and_accuracy
+    return server_loss_and_accuracy
+
+
+def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]],
+                                          server_test_set: DataLoader) -> List:
+    """
+    Aggregate the models of the child servers to the parent server model, along the download link. i.e. parameters of
+    the root server gets aggregated with the parameters of its child servers, and gets assigned to the child servers.
+    :param server_hierarchy: List of servers in the hierarchy
+    :param server_test_set: List of test data for server model evaluation, once the aggregation is done
+    :return: None
+    """
+    # Store the loss and accuracy at each level of the server model hierarchy
+    server_loss_and_accuracy = []
+
+    # Aggregate the parent server to the child server down the hierarchy starting from the leaf nodes
+    for depth_level in range(len(server_hierarchy) - 1):
+        loss_and_accuracy_at_level = []
+
+        for server in server_hierarchy[depth_level]:
+            # Get the server parameters and the parent server parameters
+            parent_server = server_hierarchy[depth_level + 1][server.parent_server_id]
+            server_parameters = [server.model.state_dict(), parent_server.model.state_dict()]
+
+            # Aggregate child server models
+            server.train(server_parameters)
+
+            # Evaluate the server model
+            loss, accuracy = server.evaluate(server_test_set)
+            loss_and_accuracy_at_level.append((loss, accuracy))
+
+        server_loss_and_accuracy.append(loss_and_accuracy_at_level)
+
+    return server_loss_and_accuracy
 
 
 def server_fn(server_id: int) -> Server:
