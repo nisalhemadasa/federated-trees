@@ -5,6 +5,7 @@ Author: Nisal Hemadasa
 Date: 18-10-2024
 Version: 1.0
 """
+import importlib
 import random
 from collections import OrderedDict
 from typing import List
@@ -32,6 +33,7 @@ class Client:
         self.mini_batch_size = mini_batch_size
         self.trainloader = None  # initialized only when sample_data() is called
         self.testloader = None  # initialized only when sample_data() is called
+        self.parent_server_id = None  # server ID in the server hierarchy to which the client is connected
 
     def get_model_weights(self):
         """ Get the model weights and biases """
@@ -77,10 +79,21 @@ def get_parameters(net) -> List[np.ndarray]:
     """ Set the model weights and biases """
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
-    """ Get the train and test dataloaders """
-    trainloader = convert_dataset_to_loader(_dataset=trainset, _batch_size=mini_batch_size)
-    testloader = convert_dataset_to_loader(_dataset=testset, _batch_size=mini_batch_size, _is_shuffle=False)
-    return trainloader, testloader
+
+def client_initial_training(_clients: List[Client]) -> List:
+    """
+    Train the clients initially using their local data.
+    :param _clients: List of client instances
+    :return:  List of loss and accuracy of each client after the initial training
+    """
+    initial_client_loss_and_accuracy = []
+    # All the clients are trained individually using local data initially
+    for client in _clients:
+        client.sample_data()
+        client.fit(None)
+        initial_client_loss_and_accuracy.append(client.evaluate())
+
+    return initial_client_loss_and_accuracy
 
 
 def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, _dataset: List[Dataset]) -> Client:

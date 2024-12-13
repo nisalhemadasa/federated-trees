@@ -7,118 +7,21 @@ Version: 1.0
 """
 import random
 import time
-from typing import List, OrderedDict
-
-from torch.utils.data import DataLoader
+from typing import List
 
 import constants
 from data.dataset_loader import load_datasets
 from data.utils import split_dataset, convert_dataset_to_loader
-from drift_concepts.drift import drift_fn, apply_drift, Drift
-from federated_network.client import client_fn, Client, set_parameters
-from federated_network.server import server_fn, Server
+from drift_concepts.drift import drift_fn
+from federated_network.client import client_fn, Client, client_initial_training
+from federated_network.server import server_fn, aggregate_client_models
+from federated_network.utils import update_progress, link_server_hierarchy, train_client_models, link_clients_to_servers
 from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
-
-
-def aggregate_client_models(_server_hierarchy: List[List[Server]], _sampled_clients_model_parameters: List[OrderedDict],
-                            _server_test_set: DataLoader) -> List:
-    """
-    Aggregate the models of the clients to the server model.
-    :param _server_hierarchy: List of servers in the hierarchy
-    :param _sampled_clients_model_parameters: List of client model parameters
-    :param _server_test_set: List of test data for server model evaluation, once the aggregation is done
-    :return: List of loss and accuracy at each level of the server hierarchy
-    """
-    # Store the loss and accuracy at each level of the server model hierarchy
-    _server_loss_and_accuracy = []
-
-    # Aggregate the models of the clients to the server model
-    for depth_level in range(len(_server_hierarchy)):
-        loss_and_accuracy_at_level = []
-
-        for server in _server_hierarchy[depth_level]:
-            # Aggregate the models of the sampled clients to the server model
-            server.train(_sampled_clients_model_parameters)
-
-            # Evaluate server models on the test set
-            loss, accuracy = server.evaluate(_server_test_set)
-            loss_and_accuracy_at_level.append((loss, accuracy))
-
-        _server_loss_and_accuracy.append(loss_and_accuracy_at_level)
-
-    return _server_loss_and_accuracy
-
-
-def client_initial_training(_clients: List[Client]) -> List:
-    """
-    Train the clients initially using their local data.
-    :param _clients: List of client instances
-    :return:  List of loss and accuracy of each client after the initial training
-    """
-    initial_client_loss_and_accuracy = []
-    # All the clients are trained individually using local data initially
-    for client in _clients:
-        client.sample_data()
-        client.fit(None)
-        initial_client_loss_and_accuracy.append(client.evaluate())
-
-    return initial_client_loss_and_accuracy
-
-
-def train_client_models(_all_clients, _sampled_client_ids, _server: Server, _drift: Drift) -> List:
-    """
-    Train the client models.
-    :param _all_clients: List of all client instances
-    :param _sampled_client_ids: List of sampled client IDs
-    :param _server: Server instance
-    :param _drift: Drift instance
-    :return: List of loss and accuracy of each client after training
-    """
-    round_client_loss_and_accuracy = []
-
-    # Apply drift to the clients
-    if _drift.is_drift:
-        # Sample data from the drift applied datasets
-        apply_drift(_all_clients, _drift)
-    else:
-        for client in _all_clients:
-            # Sample data from the original datasets
-            client.sample_data()
-
-    for client in _all_clients:
-        # client.sample_data()
-        if client.client_id in _sampled_client_ids:
-            set_parameters(client.model, _server.server_model.state_dict())
-            # round_client_loss_and_accuracy.append(client.evaluate())
-
-            # If the client is sampled in this global training round, then train using the server aggregated parameters
-            client.fit(_server.server_model.state_dict())
-        else:
-            # If the client is not sampled, perform local training without server parameters
-            client.fit(None)
-
-            # round_client_loss_and_accuracy.append(client.evaluate())
-
-        # Evaluate the client model after training
-        round_client_loss_and_accuracy.append(client.evaluate())
-
-    return round_client_loss_and_accuracy
-
-
-def update_progress(_round, _num_training_rounds) -> None:
-    """
-    Update the progress of the simulation
-    :param _round: Current simulation iteration number
-    :param _num_training_rounds: Total number of training rounds
-    :return: None
-    """
-    progress = (_round / _num_training_rounds) * 100
-    print(f"\rSimulation Percentage completed: {progress:.2f}%", end="")
 
 
 class FederatedNetwork:
     def __init__(self, num_client_instances, server_tree_layout, num_training_rounds, dataset_name, drift_specs,
-                 client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4):
+                 simulation_parameters, client_select_fraction=0.5, minibatch_size=32, num_local_epochs=4):
         # Dataset name
         self.dataset_name = dataset_name
 
@@ -152,6 +55,9 @@ class FederatedNetwork:
         # Concept drift properties
         self.drift = drift_fn(num_client_instances, num_training_rounds, drift_specs)
 
+        # Simulation parameters
+        self.simulation_parameters = simulation_parameters
+
         # Create instances for servers at each level of the server tree
         server_hierarchy = []
         for depth_level in range(len(server_tree_layout)):
@@ -159,6 +65,12 @@ class FederatedNetwork:
             servers_at_level = [server_fn(server_id) for server_id in range(server_tree_layout[depth_level])]
             server_hierarchy.append(servers_at_level)
         self.server_hierarchy = server_hierarchy
+
+        # Link servers in the hierarchical structure
+        link_server_hierarchy(self.server_hierarchy)
+
+        # Distribute the clients to the leaf servers
+        link_clients_to_servers(self.server_hierarchy[0], self.clients, self.num_client_instances)
 
     def sample_clients(self) -> List[Client]:
         """ Sample clients from the client pool and returns a list of client instances """
@@ -207,12 +119,22 @@ class FederatedNetwork:
             server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Implement local training for every client and evaluate the client models
-            round_client_loss_and_accuracy = train_client_models(self.clients, sampled_client_ids,
-                                                                 self.server_hierarchy[0][0], self.drift)
+            if self.simulation_parameters['is_download_from_root_server']:
+                # If the clients download the model from the root server of the hierarchy
+                server_depth = len(self.server_hierarchy) - 1
+            else:
+                # If the clients download the model from the leaf servers of the hierarchy
+                server_depth = 0
+
+            round_client_loss_and_accuracy = train_client_models(self.clients,
+                                                                 sampled_client_ids,
+                                                                 self.server_hierarchy[server_depth],
+                                                                 self.drift,
+                                                                 self.simulation_parameters)
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
 
             # Update the progress of the simulation
-            update_progress(_round=_round + 1, _num_training_rounds=self.num_training_rounds)
+            update_progress(_round=_round + 1, num_training_rounds=self.num_training_rounds)
 
         # Stop the timer
         end_time = time.time()

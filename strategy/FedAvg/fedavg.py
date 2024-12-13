@@ -13,15 +13,15 @@ class FedAvg:
     def __init__(self):
         pass
 
-    def aggregate_models(self, server_model, client_model_params_list):
+    def aggregate_models(self, model, client_model_params_list):
         """ Aggregate the client models to the global model and returns the new aggregated model"""
-        server_model_params = server_model.state_dict()
-        for i in server_model_params.keys():
-            server_model_params[i] = torch.stack(
+        model_params = model.state_dict()
+        for i in model_params.keys():
+            model_params[i] = torch.stack(
                 [client_model_params[i].float() for client_model_params in client_model_params_list], 0).mean(0)
 
-        server_model.load_state_dict(server_model_params)
-        return server_model
+        model.load_state_dict(model_params)
+        return model
 
 
 def aggregator_fn():
