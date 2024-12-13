@@ -26,8 +26,8 @@ def main():
     )
 
     # Define simulation parameters
-    simulation_paramaters = dict(
-        is_server_adaptability=True,  # Evaluate the adaptability of servers/clients to the data/drift distribution
+    simulation_parameters = dict(
+        is_server_adaptability=False,  # Evaluate the adaptability of servers/clients to the data/drift distribution
         is_download_from_root_server=False,  # Downloads the model from the root server of the server hierarchy
     )
 
@@ -38,7 +38,7 @@ def main():
         num_training_rounds=20,  # Number of training rounds (in literature, over 50 rounds are trained.
         dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset
         drift_specs=drift_specifications,  # Drift specifications
-        simulation_parameters=simulation_paramaters,  # Parameters specifying the simulation scenarios
+        simulation_parameters=simulation_parameters,  # Parameters specifying the simulation scenarios
         client_select_fraction=1,  # Fraction of clients to be selected for each round
     )
 

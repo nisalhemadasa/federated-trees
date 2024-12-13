@@ -115,54 +115,53 @@ class Drift:
 
         return clients
 
-
-def swap_labels(self, clients: List[Client]) -> List[Client]:
-    """
-    Swap the labels of the specified classes in the training and testing sets for drifted clients.
-    :param clients: List of Client objects
-    :return: Updated list of Client objects with swapped labels in their datasets
-    """
-
-    def swap_labels_in_dataset(dataset):
+    def swap_labels(self, clients: List[Client]) -> List[Client]:
         """
-        Swap labels in a dataset based on the class pairs to swap.
-        :param dataset: Dataset to process
-        :return: Updated images and labels tensors
+        Swap the labels of the specified classes in the training and testing sets for drifted clients.
+        :param clients: List of Client objects
+        :return: Updated list of Client objects with swapped labels in their datasets
         """
-        images = dataset.data  # Access dataset images
-        labels = dataset.targets  # Access dataset labels
 
-        for class_a, class_b in self.class_pairs_to_swap:
-            indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
-            indices_b = (labels == class_b).nonzero(as_tuple=True)[0]
+        def swap_labels_in_dataset(dataset):
+            """
+            Swap labels in a dataset based on the class pairs to swap.
+            :param dataset: Dataset to process
+            :return: Updated images and labels tensors
+            """
+            images = dataset.data  # Access dataset images
+            labels = dataset.targets  # Access dataset labels
 
-            # Swap the labels
-            labels[indices_a] = class_b
-            labels[indices_b] = class_a
+            for class_a, class_b in self.class_pairs_to_swap:
+                indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
+                indices_b = (labels == class_b).nonzero(as_tuple=True)[0]
 
-        return images, labels
+                # Swap the labels
+                labels[indices_a] = class_b
+                labels[indices_b] = class_a
 
-    # Check if there are drifted clients
-    if self.drifted_client_indices:
-        # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
-        first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
+            return images, labels
 
-        # Process training dataset
-        train_images, train_labels = swap_labels_in_dataset(first_drifted_client.local_trainset.dataset)
-        first_drifted_client.local_trainset.dataset.data = train_images
-        first_drifted_client.local_trainset.dataset.targets = train_labels
+        # Check if there are drifted clients
+        if self.drifted_client_indices:
+            # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
+            first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
 
-        # Process testing dataset
-        test_images, test_labels = swap_labels_in_dataset(first_drifted_client.testset.dataset)
-        first_drifted_client.testset.dataset.data = test_images
-        first_drifted_client.testset.dataset.targets = test_labels
+            # Process training dataset
+            train_images, train_labels = swap_labels_in_dataset(first_drifted_client.local_trainset.dataset)
+            first_drifted_client.local_trainset.dataset.data = train_images
+            first_drifted_client.local_trainset.dataset.targets = train_labels
 
-        # Assign the updated datasets to all drifted clients, since they share the same data
-        for idx in self.drifted_client_indices:
-            clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
-            clients[idx].testset.dataset = first_drifted_client.testset.dataset
+            # Process testing dataset
+            test_images, test_labels = swap_labels_in_dataset(first_drifted_client.testset.dataset)
+            first_drifted_client.testset.dataset.data = test_images
+            first_drifted_client.testset.dataset.targets = test_labels
 
-    return clients
+            # Assign the updated datasets to all drifted clients, since they share the same data
+            for idx in self.drifted_client_indices:
+                clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
+                clients[idx].testset.dataset = first_drifted_client.testset.dataset
+
+        return clients
 
 
 def get_clients_with_drift(_num_client_instances: int, _clients_fraction_with_drift: float,

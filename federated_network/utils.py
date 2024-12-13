@@ -5,7 +5,7 @@ Author: Nisal Hemadasa
 Date: 09-12-2024
 Version: 1.0
 """
-from typing import List, OrderedDict
+from typing import List, OrderedDict, Dict
 
 import constants
 from drift_concepts.drift import apply_drift, Drift
@@ -86,18 +86,19 @@ def link_clients_to_servers(leaf_servers: List[Server], clients: List[Client], n
 
 
 def train_client_models(all_clients, sampled_client_ids, servers: List[Server], drift: Drift,
-                        is_test_server_adaptability: bool, is_download_from_root_server: bool) -> List:
+                        simulation_parameters: Dict) -> List:
     """
     Train the client models in the network while applying drift if necessary.
     :param all_clients: List of all client instances
     :param sampled_client_ids: List of sampled client IDs
     :param servers: List of Server instance at a given depth level
     :param drift: Drift instance
-    :param is_test_server_adaptability: Boolean flag whether to test server adaptability or the client adaptability
-    :param is_download_from_root_server: Boolean flag whether the client should download the model from the root server
+    :param simulation_parameters: Parameters specifying the simulation scenarios
     :return: List of loss and accuracy of each client after training
     """
     round_client_loss_and_accuracy = []
+    is_server_adaptability = simulation_parameters['is_server_adaptability']
+    is_download_from_root_server = simulation_parameters['is_download_from_root_server']
 
     # Apply drift to the clients
     if drift.is_drift:
@@ -119,7 +120,7 @@ def train_client_models(all_clients, sampled_client_ids, servers: List[Server], 
         if client.client_id in sampled_client_ids:
             set_parameters(client.model, server.model.state_dict())
 
-            if is_test_server_adaptability:
+            if is_server_adaptability:
                 # Evalautes the adaptability of the server model to the data
                 round_client_loss_and_accuracy.append(client.evaluate())
 
@@ -129,10 +130,10 @@ def train_client_models(all_clients, sampled_client_ids, servers: List[Server], 
             # If the client is not sampled, perform local training without server parameters
             client.fit(None)
 
-            if is_test_server_adaptability:
+            if is_server_adaptability:
                 round_client_loss_and_accuracy.append(client.evaluate())
 
-        if not is_test_server_adaptability:
+        if not is_server_adaptability:
             # Evaluate the adaptability of the client models to the data
             round_client_loss_and_accuracy.append(client.evaluate())
 
