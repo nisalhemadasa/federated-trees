@@ -49,7 +49,7 @@ class FederatedNetwork:
 
         # Create client instances
         self.clients = [
-            client_fn(i, self.num_local_epochs, self.minibatch_size,
+            client_fn(i, self.num_local_epochs, self.minibatch_size, self.dataset_name,
                       [partitioned_trainsets[i], partitioned_testsets[i]]) for i in range(num_client_instances)]
 
         # Concept drift properties
@@ -62,7 +62,7 @@ class FederatedNetwork:
         server_hierarchy = []
         for depth_level in range(len(server_tree_layout)):
             # For each level in the tree, create a list of server instances
-            servers_at_level = [server_fn(server_id) for server_id in range(server_tree_layout[depth_level])]
+            servers_at_level = [server_fn(server_id, self.dataset_name) for server_id in range(server_tree_layout[depth_level])]
             server_hierarchy.append(servers_at_level)
         self.server_hierarchy = server_hierarchy
 
@@ -116,13 +116,12 @@ class FederatedNetwork:
             round_server_loss_and_accuracy = aggregate_client_models(self.server_hierarchy,
                                                                      sampled_clients_model_parameters,
                                                                      server_test_set)
-            server_loss_and_accuracy.append(round_server_loss_and_accuracy)
+            # server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Server downward-aggregator-link
             if self.simulation_parameters['is_server_downward_aggregation']:
                 round_server_loss_and_accuracy = downward_link_aggregate_server_models(self.server_hierarchy,
-                                                                         sampled_clients_model_parameters,
-                                                                         server_test_set)
+                                                                                       server_test_set)
                 server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Implement local training for every client and evaluate the client models

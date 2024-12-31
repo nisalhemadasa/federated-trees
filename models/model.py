@@ -9,6 +9,7 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
@@ -37,17 +38,19 @@ class SimpleModel(nn.Module):
         return x
 
 
-# for MNIST dataset (28 x 28 dimensional images)
-class CNN(nn.Module):
+# for MNIST and F_MNIST dataset (28 x 28 dimensional images)
+class CNNMNIST(nn.Module):
     def __init__(self):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
-        self.fc1 = nn.Linear(64 * 5 * 5, 128)
-        self.fc2 = nn.Linear(128, 10)
+        """Defines the architecture of the network"""
+        super(CNNMNIST, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
+        self.fc1 = nn.Linear(in_features=64 * 5 * 5, out_features=128)
+        self.fc2 = nn.Linear(in_features=128, out_features=10)
         self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
+        """Describes how input data flows through the network"""
         x = torch.relu(self.conv1(x))
         x = torch.max_pool2d(x, kernel_size=2, stride=2)
         x = torch.relu(self.conv2(x))
@@ -58,6 +61,72 @@ class CNN(nn.Module):
         x = self.fc2(x)
         # return x
         return torch.log_softmax(x, dim=1)
+
+
+# for CIFAR 10 dataset (32 x 32 dimensional images) in 3 channels
+class CNNCIFAR10(nn.Module):
+    """
+    A Convolutional Neural Network for CIFAR-10 dataset.
+    Input: 32x32 RGB images (3 channels)
+    Output: 10-class classification
+    """
+
+    def __init__(self):
+        super(CNNCIFAR10, self).__init__()
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+
+        # Fully connected layers
+        self.fc1 = nn.Linear(in_features=128 * 4 * 4, out_features=256)  # Adjusted for CIFAR-10 size
+        self.fc2 = nn.Linear(in_features=256, out_features=10)  # 10 classes for CIFAR-10
+
+        # Dropout for regularization
+        self.dropout = nn.Dropout(p=0.5)
+
+    def forward(self, x):
+        # Convolutional and pooling layers
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, kernel_size=2, stride=2)  # Output size: [batch_size, 32, 16, 16]
+
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, kernel_size=2, stride=2)  # Output size: [batch_size, 64, 8, 8]
+
+        x = F.relu(self.conv3(x))
+        x = F.max_pool2d(x, kernel_size=2, stride=2)  # Output size: [batch_size, 128, 4, 4]
+
+        # Flatten
+        x = x.view(x.size(0), -1)  # Flatten to [batch_size, 128 * 4 * 4]
+
+        # Fully connected layers
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+
+        # Log-Softmax for classification
+        return F.log_softmax(x, dim=1)
+
+# class CNNCIFAR10(nn.Module):
+#     def __init__(self):
+#         super(CNNCIFAR10, self).__init__()
+#         self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3)
+#         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
+#         self.fc1 = nn.Linear(in_features=64 * 5 * 5, out_features=128)
+#         self.fc2 = nn.Linear(in_features=128, out_features=10)
+#         self.dropout = nn.Dropout(p=0.5)
+#
+#     def forward(self, x):
+#         x = torch.relu(self.conv1(x))
+#         x = torch.max_pool2d(x, kernel_size=2, stride=2)
+#         x = torch.relu(self.conv2(x))
+#         x = torch.max_pool2d(x, kernel_size=2, stride=2)
+#         x = x.view(x.size(0), -1)
+#         x = torch.relu(self.fc1(x))
+#         x = self.dropout(x)
+#         x = self.fc2(x)
+#         # return x
+#         return torch.log_softmax(x, dim=1)
 
 
 def train(_model: nn.Module, _dataloader: DataLoader, epochs: int, verbose=False) -> None:

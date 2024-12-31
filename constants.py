@@ -24,8 +24,8 @@ class MiscMessages:
 # Names of the dataset
 class DatasetNames:
     MNIST = 'MNIST'
-    F_MNIST = 'Fashion_MNIST'
-    CIFAR_10 = 'CIFAR_10'
+    F_MNIST = 'FashionMNIST'
+    CIFAR_10 = 'cifar-10-batches-py'
 
 
 class DatasetFileNames:

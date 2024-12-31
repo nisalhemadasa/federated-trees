@@ -9,9 +9,10 @@ from typing import List, OrderedDict
 
 from torch.utils.data import DataLoader
 
+import constants
 import strategy
 from federated_network.client import DEVICE
-from models.model import SimpleModel, test, CNN
+from models.model import SimpleModel, test, CNNMNIST, CNNCIFAR10
 
 
 class Server:
@@ -82,8 +83,7 @@ def aggregate_client_models(server_hierarchy: List[List[Server]], sampled_client
     return server_loss_and_accuracy
 
 
-def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]],
-                                          server_test_set: DataLoader) -> List:
+def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]], server_test_set: DataLoader) -> List:
     """
     Aggregate the models of the child servers to the parent server model, along the download link. i.e. parameters of
     the root server gets aggregated with the parameters of its child servers, and gets assigned to the child servers.
@@ -115,13 +115,18 @@ def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]],
     return server_loss_and_accuracy
 
 
-def server_fn(server_id: int) -> Server:
+def server_fn(server_id: int, dataset_name: str) -> Server:
     """
     Create a server instances on demand for the optimal use of resources.
     :param server_id: Server ID
+    :param dataset_name: Name of the dataset
     :returns Server: A Server instance.
     """
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
     # model = SimpleModel().to(DEVICE)
-    model = CNN().to(DEVICE)
+    if dataset_name == constants.DatasetNames.CIFAR_10:
+        model = CNNCIFAR10().to(DEVICE)
+    else:
+        model = CNNMNIST().to(DEVICE)
+
     return Server(_server_id=server_id, _strategy=aggregator_strategy, _model=model)

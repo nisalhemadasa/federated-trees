@@ -9,8 +9,10 @@ import copy
 import math
 from typing import Dict, List
 
+import numpy as np
 import torch
 from scipy.ndimage import rotate
+import torchvision.transforms as transforms
 
 import constants
 from federated_network.client import Client
@@ -70,7 +72,6 @@ class Drift:
             """
             Apply rotation drift to a fraction of the images.
             :param dataset: Dataset to process
-            :param _fraction_rotated: Fraction of images to rotate
             :param _rotation_angle: Angle of rotation
             :return: Drifted images and original labels
             """
@@ -140,6 +141,161 @@ class Drift:
                 labels[indices_b] = class_a
 
             return images, labels
+
+        # Check if there are drifted clients
+        if self.drifted_client_indices:
+            # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
+            first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
+
+            # Process training dataset
+            train_images, train_labels = swap_labels_in_dataset(first_drifted_client.local_trainset.dataset)
+            first_drifted_client.local_trainset.dataset.data = train_images
+            first_drifted_client.local_trainset.dataset.targets = train_labels
+
+            # Process testing dataset
+            test_images, test_labels = swap_labels_in_dataset(first_drifted_client.testset.dataset)
+            first_drifted_client.testset.dataset.data = test_images
+            first_drifted_client.testset.dataset.targets = test_labels
+
+            # Assign the updated datasets to all drifted clients, since they share the same data
+            for idx in self.drifted_client_indices:
+                clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
+                clients[idx].testset.dataset = first_drifted_client.testset.dataset
+
+        return clients
+
+    def rotate_cifar_images(self, clients: List[Client]) -> List[Client]:
+        """
+        Apply rotation drift to the images of the client dataset. Both the rotation angle and the number of images to
+        rotate increase linearly with the number of federated training rounds.
+        :param clients: List of Client objects
+        :return: List of Client objects with the rotated images in their datasets
+        """
+
+        def apply_rotation(dataset, _rotation_angle):
+            """
+            Apply rotation drift to a fraction of the images.
+            :param dataset: Dataset to process
+            :param _rotation_angle: Angle of rotation
+            :return: Drifted images and original labels
+            """
+            drifted_images = []  # To store rotated images
+            labels = []  # To store labels
+
+            # Loop through the dataset directly
+            for image, label in dataset:
+                rotation_transform = transforms.RandomRotation(degrees=_rotation_angle)
+                rotated_image = rotation_transform(image)
+
+                # Append to the drifted images and labels
+                drifted_images.append(rotated_image)
+                labels.append(label)
+
+            # Stack images and labels to create tensors
+            drifted_images = torch.stack(drifted_images)
+            labels = torch.tensor(labels)
+
+            return drifted_images, labels
+
+        def update_dataset(dataset, images, labels):
+            """
+            Update the dataset's raw data and targets while handling both tensor and NumPy formats.
+            :param dataset: Dataset to update
+            :param images: Rotated images
+            :param labels: Corresponding labels
+            :return: None
+            """
+            # Update data
+            if isinstance(dataset.data, torch.Tensor):
+                dataset.data = images  # Keep tensors directly for MNIST
+            elif isinstance(dataset.data, np.ndarray):
+                dataset.data = images.numpy()  # Convert to NumPy for CIFAR-10
+            else:
+                raise TypeError("Unsupported data type for dataset.data")
+
+            # Update targets
+            if isinstance(dataset.targets, torch.Tensor):
+                dataset.targets = labels  # Keep tensors directly for MNIST
+            elif isinstance(dataset.targets, list):
+                dataset.targets = labels.tolist()  # Convert to list for CIFAR-10
+            else:
+                raise TypeError("Unsupported data type for dataset.targets")
+
+        # Calculate rotation parameters
+        transition_progress = ((self.current_round + 1) - self.drift_start_round) / (
+                self.drift_end_round - self.drift_start_round)
+        # rotation_angle = transition_progress * self.max_rotation
+        rotation_angle = self.max_rotation
+        total_rounds = self.drift_end_round - self.drift_start_round + 1
+        fraction_rotated = (self.current_round - self.drift_start_round + 1) / total_rounds
+
+        # Check if there are drifted clients
+        if self.drifted_client_indices:
+            # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
+            first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
+
+            # Process training dataset
+            train_images, train_labels = apply_rotation(first_drifted_client.local_trainset.dataset, rotation_angle)
+            update_dataset(first_drifted_client.local_trainset.dataset, train_images, train_labels)
+
+            # Process testing dataset
+            test_images, test_labels = apply_rotation(first_drifted_client.testset.dataset, rotation_angle)
+            update_dataset(first_drifted_client.testset.dataset, test_images, test_labels)
+
+            # Assign the updated datasets to all drifted clients, since they share the same data
+            for idx in self.drifted_client_indices:
+                clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
+                clients[idx].testset.dataset = first_drifted_client.testset.dataset
+
+        return clients
+
+    def swap_cifar_labels(self, clients: List[Client]) -> List[Client]:
+        """
+        Swap the labels of the specified classes in the training and testing sets for drifted clients.
+        :param clients: List of Client objects
+        :return: Updated list of Client objects with swapped labels in their datasets
+        """
+
+        def swap_labels_in_dataset(dataset):
+            """
+            Swap labels in a dataset based on the class pairs to swap.
+            :param dataset: Dataset to process
+            :return: Updated images and labels tensors
+            """
+            swapped_images = []  # To store images
+            swapped_labels = []  # To store swapped labels
+
+            # Loop through the dataset directly
+            for image, label in dataset:
+                # Check and swap labels if they belong to specified class pairs
+                for class_a, class_b in self.class_pairs_to_swap:
+                    if label == class_a:
+                        label = class_b  # Swap label to class_b
+                    elif label == class_b:
+                        label = class_a  # Swap label to class_a
+
+                # Append the image and the potentially swapped label
+                swapped_images.append(image)
+                swapped_labels.append(label)
+
+            # Stack images and labels into tensors
+            swapped_images = torch.stack(swapped_images)  # Combine all images into a single tensor
+            swapped_labels = torch.tensor(swapped_labels)  # Convert labels to a tensor
+
+            return swapped_images, swapped_labels
+
+            # images = dataset.data  # Access dataset images
+            # labels = dataset.targets  # Access dataset labels
+            #
+            # for class_a, class_b in self.class_pairs_to_swap:
+            #     indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
+            #     indices_b = (labels == class_b).nonzero(as_tuple=True)[0]
+            #
+            #     # Swap the labels
+            #     labels[indices_a] = class_b
+            #     labels[indices_b] = class_a
+            #
+            # return images, labels
 
         # Check if there are drifted clients
         if self.drifted_client_indices:
