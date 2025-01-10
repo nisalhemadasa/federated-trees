@@ -124,8 +124,8 @@ def plot_client_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple]) -> Non
     :return: None
     """
     # Extract the loss and accuracy values from the list of tuples
-    client_avg_losses = [x[0] for x in loss_and_accuracy]
-    client_avg_accuracies = [x[1] for x in loss_and_accuracy]
+    client_avg_accuracies = [x[0] for x in loss_and_accuracy]
+    client_avg_losses = [x[1] for x in loss_and_accuracy]
 
     # Plot the average loss of the clients against the number of rounds
     plt.figure()  # Create a new figure for loss
@@ -151,13 +151,22 @@ def plot_server_lvl_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple]) ->
     all server levels
     :return: None
     """
-    # Extract the loss and accuracy values from the list of tuples
-    server_avg_losses = [x[0] for x in loss_and_accuracy]
-    server_avg_accuracies = [x[1] for x in loss_and_accuracy]
+    if not loss_and_accuracy:
+        print('No data to plot')
+        return
+
+    num_level = len(loss_and_accuracy[0])  # Number of server tree hierarchy levels
+    server_avg_accuracies = []  # stores accuracies for each level [root, ..., leaf]
+    server_avg_losses = []  # stores losses for each level [root, ..., leaf]
+
+    for level in range(num_level):
+        server_avg_accuracies.append([x[level][1] for x in loss_and_accuracy])
+        server_avg_losses.append([x[level][0] for x in loss_and_accuracy])
 
     # Plot the average loss of the server against the number of rounds
     plt.figure()  # Create a new figure for loss
-    plt.plot(server_avg_losses, label='Average Server Loss')
+    for level in range(num_level):
+        plt.plot(server_avg_losses[level], label=f'Level {level} Average Server Loss')
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
                             constants.Plots.SERVER_LEVEL_AVG_LOSS_VS_ROUNDS_TITLE,
@@ -165,7 +174,8 @@ def plot_server_lvl_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple]) ->
 
     # Plot the average accuracy of the server against the number of rounds
     plt.figure()  # Create a new figure for accuracy
-    plt.plot(server_avg_accuracies, label='Average Server Accuracy')
+    for level in range(num_level):
+        plt.plot(server_avg_accuracies[level], label=f'Level {level} Average Server Accuracy')
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
                             constants.Plots.SERVER_LEVEL_AVG_ACCURACY_VS_ROUNDS_TITLE,
