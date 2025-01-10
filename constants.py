@@ -15,6 +15,15 @@ class Paths:
     # path related to saved plots
     PLOT_SAVE_PATH = './plots/saved_plots/'
 
+    # path related to saved logs
+    LOG_SAVE_PATH = './logs/saved_logs/'
+
+
+# File extensions
+class FileExtesions:
+    PKL = '.pkl'
+    CSV = '.csv'
+
 
 # String related to miscellaneous messages
 class MiscMessages:
@@ -79,16 +88,30 @@ class Plots:
     NUMBER_OF_ROUNDS = 'Number of Rounds'
     LOSS = 'Loss'
     ACCURACY = 'Accuracy'
-    # for client loss vs rounds plot
+    # for client individual loss/accuracy vs rounds plot
     CLIENT_LOSS_VS_ROUNDS_TITLE = 'Loss per Client Across Rounds'
     CLIENT_ACCURACY_VS_ROUNDS_TITLE = 'Accuracy per Client Across Rounds'
     CLIENT_LOSS_VS_ROUNDS_PNG = 'client_loss_vs_rounds.png'
     CLIENT_ACCURACY_VS_ROUNDS_PNG = 'client_accuracy_vs_rounds.png'
-    # for server loss vs rounds plot
+    # for server individual loss/accuracy vs rounds plot
     SERVER_LOSS_VS_ROUNDS_TITLE = 'Loss per servers Across Rounds'
     SERVER_ACCURACY_VS_ROUNDS_TITLE = 'Accuracy per server Across Rounds'
     SERVER_LOSS_VS_ROUNDS_PNG = 'server_loss_vs_rounds.png'
     SERVER_ACCURACY_VS_ROUNDS_PNG = 'server_accuracy_vs_rounds.png'
+    # for client level average loss/accuracy vs rounds plot
+    CLIENT_AVG_LOSS_VS_ROUNDS_TITLE = 'Client Level Average Loss Across Rounds'
+    CLIENT_AVG_LOSS_VS_ROUNDS_PNG = 'client_avg_loss_vs_rounds.png'
+    CLIENT_AVG_ACCURACY_VS_ROUNDS_TITLE = 'Client Level Average Accuracy Across Rounds'
+    CLIENT_AVG_ACCURACY_VS_ROUNDS_PNG = 'client_avg_accuracy_vs_rounds.png'
+    # for server level average loss/accuracy vs rounds plot
+    SERVER_LEVEL_AVG_LOSS_VS_ROUNDS_TITLE = 'Server Level Average Loss Across Rounds'
+    SERVER_LEVEL_AVG_LOSS_VS_ROUNDS_PNG = 'server_level_avg_loss_vs_rounds.png'
+    SERVER_OVERALL_AVG_LOSS_VS_ROUNDS_TITLE = 'Server Overall Average Loss Across Rounds'
+    SERVEr_OVERALL_AVG_LOSS_VS_ROUNDS_PNG = 'server_overall_avg_loss_vs_rounds.png'
+    SERVER_LEVEL_AVG_ACCURACY_VS_ROUNDS_TITLE = 'Server Level Average Accuracy Across Rounds'
+    SERVER_LEVEL_AVG_ACCURACY_VS_ROUNDS_PNG = 'server_level_avg_accuracy_vs_rounds.png'
+    SERVER_OVERALL_AVG_ACCURACY_VS_ROUNDS_TITLE = 'Server Overall Average Accuracy Across Rounds'
+    SERVER_OVERALL_AVG_ACCURACY_VS_ROUNDS_PNG = 'server_overall_avg_accuracy_vs_rounds.png'
 
 
 # Drift patterns
@@ -107,3 +130,12 @@ class DriftPatterns:
 class DriftCreationMethods:
     LABEL_SWAPPING = 'label_swapping'
     ROTATION = 'rotation'
+
+
+# file names related to logging
+class Logs:
+    CLIENT_LOG = 'client_log'
+    SERVER_LOG = 'server_log'
+    CLIENT_AVG_LOG = 'client_avg_log'
+    SERVER_LVL_AVG_LOG = 'server_level_avg_log'
+    SERVER_OVERALL_AVG_LOG = 'server_overall_avg_log'
