@@ -130,5 +130,14 @@ def configure_and_save_plot(_plt, _x_label, _y_label, _title, _file_path):
     _plt.ylabel(_y_label)
     _plt.legend()
     _plt.title(_title)
-    _plt.savefig(_file_path)
+
+    # Save the plot as a high-quality PNG
+    png_path = f"{_file_path}.png"
+    _plt.savefig(png_path, dpi=300)  # Increase DPI for higher resolution
+
+    # Save the plot as a PDF
+    pdf_path = f"{_file_path}.pdf"
+    _plt.savefig(pdf_path, format="pdf")
+
+    # Display the plot
     _plt.show()
