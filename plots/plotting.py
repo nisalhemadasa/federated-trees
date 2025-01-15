@@ -116,20 +116,24 @@ def plot_server_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> N
                             constants.Paths.PLOT_SAVE_PATH + constants.Plots.SERVER_ACCURACY_VS_ROUNDS_PNG)
 
 
-def plot_client_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple]) -> None:
+def plot_client_avg_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> None:
     """
     Plot the average loss and accuracy of the clients against the number of training rounds
     :param loss_and_accuracy: List of tuples containing the average loss and accuracy of the all client models for each
-    round
+    round. - Outer List: drifted and non-drifted clients
+           - Inner List: List of performance for each epoch
     :return: None
     """
     # Extract the loss and accuracy values from the list of tuples
-    client_avg_accuracies = [x[0] for x in loss_and_accuracy]
-    client_avg_losses = [x[1] for x in loss_and_accuracy]
+    non_drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[0]]
+    non_drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[0]]
+    drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[1]]
+    drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[1]]
 
     # Plot the average loss of the clients against the number of rounds
     plt.figure()  # Create a new figure for loss
-    plt.plot(client_avg_losses, label='Average Client Loss')
+    plt.plot(non_drifted_client_avg_losses, label='Average Client Loss')
+    plt.plot(drifted_client_avg_losses, label='Average Drifted Client Loss')
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
                             constants.Plots.CLIENT_AVG_LOSS_VS_ROUNDS_TITLE,

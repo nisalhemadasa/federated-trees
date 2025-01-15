@@ -101,6 +101,33 @@ def compute_server_average_metrics(data: List[List[List[Tuple[float, float]]]]) 
     return level_averages, overall_averages
 
 
+def split_clients_loss_and_accuracy(clients_loss_and_accuracy: List[List[Tuple[float, float]]],
+                                    drifted_clients: List[int]
+                                    ) -> Tuple[List[List[Tuple[float, float]]], List[List[Tuple[float, float]]]]:
+    """
+    Split the clients' loss and accuracy into drifted and non-drifted groups.
+
+    :param clients_loss_and_accuracy: List of client performance data structured as,
+                                      - Outer list represents epochs.
+                                      - Inner list represents clients.
+                                      - Tuple contains (loss, accuracy) for each client.
+    :param drifted_clients: List of indices representing drifted clients.
+    :return: Two lists:
+                - Non-drifted clients' loss and accuracy.
+                - Drifted clients' loss and accuracy.
+    """
+    drifted_clients_loss_and_accuracy = [
+        [performance for idx, performance in enumerate(epoch_data) if idx in drifted_clients]
+        for epoch_data in clients_loss_and_accuracy
+    ]
+    non_drifted_clients_loss_and_accuracy = [
+        [performance for idx, performance in enumerate(epoch_data) if idx not in drifted_clients]
+        for epoch_data in clients_loss_and_accuracy
+    ]
+
+    return non_drifted_clients_loss_and_accuracy, drifted_clients_loss_and_accuracy
+
+
 def plot_average_performance() -> None:
     """
     Read average performance logs and plot the average accuracy and loss for each round.
