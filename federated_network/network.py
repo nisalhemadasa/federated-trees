@@ -16,7 +16,12 @@ from drift_concepts.drift import drift_fn
 from federated_network.client import client_fn, Client, client_initial_training
 from federated_network.server import server_fn, aggregate_client_models, downward_link_aggregate_server_models
 from federated_network.utils import update_progress, link_server_hierarchy, train_client_models, link_clients_to_servers
-from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds
+from logs.analysis_functions import compute_client_average_metrics, compute_server_average_metrics, \
+    split_clients_loss_and_accuracy
+from logs.logging import write_logs
+from plots.plotting import plot_client_performance_vs_rounds, plot_server_performance_vs_rounds, \
+    plot_client_avg_performance_vs_rounds, plot_server_lvl_avg_performance_vs_rounds, \
+    plot_server_overall_avg_performance_vs_rounds
 
 
 class FederatedNetwork:
@@ -93,7 +98,7 @@ class FederatedNetwork:
 
         # Train the clients initially using their local data
         initial_client_loss_and_accuracy = client_initial_training(self.clients)
-        clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
+        # clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
         # Load the test set for server evaluation
         server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
@@ -164,3 +169,38 @@ class FederatedNetwork:
 
         # Plot the performance of the server hierarchy
         plot_server_performance_vs_rounds(server_loss_and_accuracy)
+
+        # Split the client performance to drifted and non-drifted clients
+        non_drifted_clients_loss_and_accuracy, drifted_clients_loss_and_accuracy = split_clients_loss_and_accuracy(
+            clients_loss_and_accuracy, self.drift.drifted_client_indices)
+
+        # Get average performance of the clients
+        non_drifted_client_averages = compute_client_average_metrics(non_drifted_clients_loss_and_accuracy)
+        drifted_client_averages = compute_client_average_metrics(drifted_clients_loss_and_accuracy)
+
+        # Log the performance of the clients
+        write_logs(clients_loss_and_accuracy, file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.CLIENT_LOG)
+        # Log the performance of the clients separated by drifted and non-drifted
+        write_logs(non_drifted_clients_loss_and_accuracy,
+                   file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.NON_DRIFTED_CLIENT_LOG)
+        write_logs(drifted_clients_loss_and_accuracy,
+                   file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.DRIFTED_CLIENT_LOG)
+        # Average performance of the clients
+        write_logs(non_drifted_client_averages,
+                   file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.NON_DRIFTED_CLIENT_AVG_LOG)
+        write_logs(drifted_client_averages,
+                   file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.DRIFTED_CLIENT_AVG_LOG)
+
+        # Get average performance of the servers
+        server_level_averages, server_overall_averages = compute_server_average_metrics(server_loss_and_accuracy)
+
+        # Log the performance of the server hierarchy
+        write_logs(server_loss_and_accuracy, file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.SERVER_LOG)
+        write_logs(server_level_averages, file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.SERVER_LVL_AVG_LOG)
+        write_logs(server_overall_averages,
+                   file_name=constants.Paths.LOG_SAVE_PATH + constants.Logs.SERVER_OVERALL_AVG_LOG)
+
+        # Plot average performances
+        plot_client_avg_performance_vs_rounds([non_drifted_client_averages, drifted_client_averages])
+        plot_server_lvl_avg_performance_vs_rounds(server_level_averages)
+        plot_server_overall_avg_performance_vs_rounds(server_overall_averages)

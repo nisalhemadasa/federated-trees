@@ -141,18 +141,20 @@ def plot_client_avg_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) 
 
     # Plot the average accuracy of the clients against the number of rounds
     plt.figure()  # Create a new figure for accuracy
-    plt.plot(client_avg_accuracies, label='Average Client Accuracy')
+    plt.plot(non_drifted_client_avg_accuracies, label='Average Client Accuracy')
+    plt.plot(drifted_client_avg_accuracies, label='Average Drifted Client Accuracy')
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
                             constants.Plots.CLIENT_AVG_ACCURACY_VS_ROUNDS_TITLE,
                             constants.Paths.PLOT_SAVE_PATH + constants.Plots.CLIENT_AVG_ACCURACY_VS_ROUNDS_PNG)
 
 
-def plot_server_lvl_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple]) -> None:
+def plot_server_lvl_avg_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> None:
     """
     Plot the average loss and accuracy of the server models for each level against the number of training rounds
     :param loss_and_accuracy: List of tuples containing the average loss and accuracy of the models for each round of
-    all server levels
+    all server levels.  - List index: epochs
+                        - Tuple index 0: depth level (root, ..., leaf)
     :return: None
     """
     if not loss_and_accuracy:

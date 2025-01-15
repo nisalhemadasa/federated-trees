@@ -7,6 +7,7 @@ Version: 1.0
 """
 import constants
 from federated_network.network import FederatedNetwork
+from logs.analysis_functions import plot_average_performance
 
 
 def main():
@@ -49,6 +50,9 @@ def main():
 
     # Running the simulation
     fed_net.run_simulation()
+
+    # Read and plot the log files
+    # plot_average_performance()
 
 
 if __name__ == "__main__":
