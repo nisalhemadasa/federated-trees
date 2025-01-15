@@ -60,10 +60,16 @@ class FederatedNetwork:
 
         # Create instances for servers at each level of the server tree
         server_hierarchy = []
+        absolute_index = 0
+
         for depth_level in range(len(server_tree_layout)):
             # For each level in the tree, create a list of server instances
-            servers_at_level = [server_fn(server_id, self.dataset_name) for server_id in range(server_tree_layout[depth_level])]
+            servers_at_level = [server_fn(server_id, self.dataset_name, absolute_index + i)  # Pass the absolute index
+                                for i, server_id in enumerate(range(server_tree_layout[depth_level]))]
+
             server_hierarchy.append(servers_at_level)
+            absolute_index += server_tree_layout[depth_level]
+
         self.server_hierarchy = server_hierarchy
 
         # Link servers in the hierarchical structure

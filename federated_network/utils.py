@@ -34,8 +34,8 @@ def link_server_hierarchy(server_hierarchy: List[List[Server]]) -> None:
     :return: None
     """
     for depth_level in range(len(server_hierarchy) - 1, 0, -1):  # Start from the second-last level
-        child_servers = server_hierarchy[depth_level - 1]
-        parent_servers = server_hierarchy[depth_level]
+        child_servers = server_hierarchy[depth_level]
+        parent_servers = server_hierarchy[depth_level - 1]
 
         # Divide child servers evenly among parent servers
         num_parents = len(parent_servers)

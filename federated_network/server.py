@@ -16,8 +16,9 @@ from models.model import SimpleModel, test, CNNMNIST, CNNCIFAR10
 
 
 class Server:
-    def __init__(self, _server_id, _strategy, _model, _client_ids=None):
+    def __init__(self, _server_id, _abs_id, _strategy, _model, _client_ids=None):
         self.server_id = _server_id
+        self.abs_id = _abs_id   # Absolute ID that keeps a running count of the servers in the server hierarchy
         self.strategy = _strategy
         self.model = _model
         self.client_ids = []  # List of client IDs the server is connected to in the federated network
@@ -94,13 +95,18 @@ def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]], 
     # Store the loss and accuracy at each level of the server model hierarchy
     server_loss_and_accuracy = []
 
+    # Evaluate the accuracy of the root server model
+    root_server = server_hierarchy[0][0]
+    loss, accuracy = root_server.evaluate(server_test_set)
+    server_loss_and_accuracy.append([(loss, accuracy)])
+
     # Aggregate the parent server to the child server down the hierarchy starting from the leaf nodes
     for depth_level in range(len(server_hierarchy) - 1):
         loss_and_accuracy_at_level = []
 
-        for server in server_hierarchy[depth_level]:
+        for server in server_hierarchy[depth_level + 1]:
             # Get the server parameters and the parent server parameters
-            parent_server = server_hierarchy[depth_level + 1][server.parent_server_id]
+            parent_server = server_hierarchy[depth_level][server.parent_server_id]
             server_parameters = [server.model.state_dict(), parent_server.model.state_dict()]
 
             # Aggregate child server models
@@ -115,11 +121,12 @@ def downward_link_aggregate_server_models(server_hierarchy: List[List[Server]], 
     return server_loss_and_accuracy
 
 
-def server_fn(server_id: int, dataset_name: str) -> Server:
+def server_fn(server_id: int, dataset_name: str, server_abs_id: int) -> Server:
     """
     Create a server instances on demand for the optimal use of resources.
     :param server_id: Server ID
     :param dataset_name: Name of the dataset
+    :param server_abs_id: Absolute server ID; a running count of all the servers created
     :returns Server: A Server instance.
     """
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
@@ -129,4 +136,4 @@ def server_fn(server_id: int, dataset_name: str) -> Server:
     else:
         model = CNNMNIST().to(DEVICE)
 
-    return Server(_server_id=server_id, _strategy=aggregator_strategy, _model=model)
+    return Server(_server_id=server_id, _abs_id=server_abs_id, _strategy=aggregator_strategy, _model=model)
