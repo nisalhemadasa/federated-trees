@@ -118,22 +118,28 @@ class FederatedNetwork:
             # As an example, only one server is considered
             sampled_clients_model_parameters = [sampled_client.model.state_dict() for sampled_client in sampled_clients]
 
-            # Aggregate the models of the clients to the server model
-            round_server_loss_and_accuracy = aggregate_client_models(self.server_hierarchy,
-                                                                     sampled_clients_model_parameters,
-                                                                     server_test_set)
-            # server_loss_and_accuracy.append(round_server_loss_and_accuracy)
-
             # Server downward-aggregator-link
             if self.simulation_parameters['is_server_downward_aggregation']:
                 round_server_loss_and_accuracy = downward_link_aggregate_server_models(self.server_hierarchy,
                                                                                        server_test_set)
+                server_loss_and_accuracy.append(round_server_loss_and_accuracy)
+            else:
+                # Aggregate the models of the clients to the server model
+                round_server_loss_and_accuracy = aggregate_client_models(self.server_hierarchy,
+                                                                         sampled_clients_model_parameters,
+                                                                         server_test_set)
                 server_loss_and_accuracy.append(round_server_loss_and_accuracy)
 
             # Implement local training for every client and evaluate the client models
             if self.simulation_parameters['is_download_from_root_server']:
                 # If the clients download the model from the root server of the hierarchy
                 server_depth = len(self.server_hierarchy) - 1
+            elif self.simulation_parameters['is_download_from_level1_server']:
+                # If the clients download the model from the root server of the hierarchy
+                server_depth = len(self.server_hierarchy) - 2
+            elif self.simulation_parameters['is_download_from_level2_server']:
+                # If the clients download the model from the root server of the hierarchy
+                server_depth = len(self.server_hierarchy) - 3
             else:
                 # If the clients download the model from the leaf servers of the hierarchy
                 server_depth = 0
