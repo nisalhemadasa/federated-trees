@@ -14,8 +14,9 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, Subset
 
+import constants
 from data.utils import convert_dataset_to_loader
-from models.model import train, test, SimpleModel, CNN
+from models.model import train, test, SimpleModel, CNNMNIST, CNNCIFAR10
 
 DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
 print(
@@ -96,18 +97,23 @@ def client_initial_training(_clients: List[Client]) -> List:
     return initial_client_loss_and_accuracy
 
 
-def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, _dataset: List[Dataset]) -> Client:
+def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, dataset_name: str,
+              _dataset: List[Dataset]) -> Client:
     """
     Create a client instances on demand for the optimal use of resources.
     :param client_id: client id
     :param num_local_epochs: number of local epochs, before being aggregation ready
     :param mini_batch_size: size of the batches for the clients to train on
+    :dataset_name: name of the dataset
     :param _dataset: train and test datasets
     :returns Client: A Client instance.
     """
     # Load model
     # _model = SimpleModel().to(DEVICE)
-    _model = CNN().to(DEVICE)
+    if dataset_name == constants.DatasetNames.CIFAR_10:
+        _model = CNNCIFAR10().to(DEVICE)
+    else:
+        _model = CNNMNIST().to(DEVICE)
 
     # Upacking _dataset (which contains a subset of the complete training set (e.g., MNIST) and the global test set)
     local_trainset, testset = _dataset

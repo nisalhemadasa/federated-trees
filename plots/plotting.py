@@ -17,10 +17,11 @@ import constants
 matplotlib.use('TkAgg')  # Or 'TkAgg', 'Qt5Agg', etc.
 
 
-def plot_client_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> None:
+def plot_client_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]], file_save_path=None) -> None:
     """
     Plot the loss of the models against the number of training rounds
     :param loss_and_accuracy: List of tuples containing the loss and accuracy of the models for each client
+    :param file_save_path: Path to save the plot
     :return: None
     """
     # List to store the loss and accuracy values of all clients across all rounds
@@ -49,9 +50,12 @@ def plot_client_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> N
     for client_id, losses in enumerate(all_client_losses):
         plt.plot(losses, label=f'Client {client_id}')
 
+    if file_save_path is None:
+        file_save_path = constants.Paths.PLOT_SAVE_PATH
+
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
                             constants.Plots.CLIENT_LOSS_VS_ROUNDS_TITLE,
-                            constants.Paths.PLOT_SAVE_PATH + constants.Plots.CLIENT_LOSS_VS_ROUNDS_PNG)
+                            file_save_path + constants.Plots.CLIENT_LOSS_VS_ROUNDS_PNG)
 
     # Plot the accuracy of each client against the number of rounds
     plt.figure()  # Create a new figure for accuracy
@@ -60,13 +64,14 @@ def plot_client_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> N
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
                             constants.Plots.CLIENT_ACCURACY_VS_ROUNDS_TITLE,
-                            constants.Paths.PLOT_SAVE_PATH + constants.Plots.CLIENT_ACCURACY_VS_ROUNDS_PNG)
+                            file_save_path + constants.Plots.CLIENT_ACCURACY_VS_ROUNDS_PNG)
 
 
-def plot_server_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> None:
+def plot_server_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]], file_save_path=None) -> None:
     """
     Plot the loss and accuracy of the server model against the number of training rounds
     :param loss_and_accuracy: List of tuples containing the loss and accuracy of the models for each client
+    :param file_save_path: Path to save the plot
     :return: None
     """
     # List to store the loss and accuracy values of all clients across all rounds
@@ -101,9 +106,12 @@ def plot_server_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> N
         for server_id, losses in enumerate(all_server_losses[level]):
             plt.plot(losses, label=f'Level {level} Server {server_id}')
 
+    if file_save_path is None:
+        file_save_path = constants.Paths.PLOT_SAVE_PATH
+
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
                             constants.Plots.SERVER_LOSS_VS_ROUNDS_TITLE,
-                            constants.Paths.PLOT_SAVE_PATH + constants.Plots.SERVER_LOSS_VS_ROUNDS_PNG)
+                            file_save_path + constants.Plots.SERVER_LOSS_VS_ROUNDS_PNG)
 
     # Plot the accuracy of each client against the number of rounds
     plt.figure()  # Create a new figure for accuracy
@@ -113,10 +121,139 @@ def plot_server_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]]) -> N
 
     configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
                             constants.Plots.SERVER_ACCURACY_VS_ROUNDS_TITLE,
-                            constants.Paths.PLOT_SAVE_PATH + constants.Plots.SERVER_ACCURACY_VS_ROUNDS_PNG)
+                            file_save_path + constants.Plots.SERVER_ACCURACY_VS_ROUNDS_PNG)
 
 
-def configure_and_save_plot(_plt, _x_label, _y_label, _title, _file_path):
+def plot_client_avg_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]], is_synchronous: bool,
+                                          file_save_path=None) -> None:
+    """
+    Plot the average loss and accuracy of the clients against the number of training rounds
+    :param loss_and_accuracy: List of tuples containing the average loss and accuracy of the all client models for each
+    round. - Outer List: drifted and non-drifted clients
+           - Inner List: List of performance for each epoch
+    :param is_synchronous: Boolean indicating if the drift synchronous or asynchronous
+    :param file_save_path: Path to save the plot
+    :return: None
+    """
+    # Extract the loss and accuracy values from the list of tuples
+    non_drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[0]]
+    non_drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[0]]
+
+    if is_synchronous:
+        drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[1]]
+        drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[1]]
+    else:
+        early_drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[1][0]]
+        early_drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[1][0]]
+        late_drifted_client_avg_accuracies = [x[0] for x in loss_and_accuracy[1][1]]
+        late_drifted_client_avg_losses = [x[1] for x in loss_and_accuracy[1][1]]
+
+    # Plot the average loss of the clients against the number of rounds
+    plt.figure()  # Create a new figure for loss
+    plt.plot(non_drifted_client_avg_losses, label='Average Client Loss')
+    if is_synchronous:
+        plt.plot(drifted_client_avg_losses, label='Average Drifted Client Loss')
+    else:
+        plt.plot(early_drifted_client_avg_losses, label='Average Early Drifted Client Loss')
+        plt.plot(late_drifted_client_avg_losses, label='Average Late Drifted Client Loss')
+
+    if file_save_path is None:
+        file_save_path = constants.Paths.PLOT_SAVE_PATH
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
+                            constants.Plots.CLIENT_AVG_LOSS_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.CLIENT_AVG_LOSS_VS_ROUNDS_PNG)
+
+    # Plot the average accuracy of the clients against the number of rounds
+    plt.figure()  # Create a new figure for accuracy
+    plt.plot(non_drifted_client_avg_accuracies, label='Average Client Accuracy')
+    if is_synchronous:
+        plt.plot(drifted_client_avg_accuracies, label='Average Drifted Client Accuracy')
+    else:
+        plt.plot(early_drifted_client_avg_accuracies, label='Average Early Drifted Client Accuracy')
+        plt.plot(late_drifted_client_avg_accuracies, label='Average Late Drifted Client Accuracy')
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
+                            constants.Plots.CLIENT_AVG_ACCURACY_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.CLIENT_AVG_ACCURACY_VS_ROUNDS_PNG)
+
+
+def plot_server_lvl_avg_performance_vs_rounds(loss_and_accuracy: List[List[Tuple]], file_save_path=None) -> None:
+    """
+    Plot the average loss and accuracy of the server models for each level against the number of training rounds
+    :param loss_and_accuracy: List of tuples containing the average loss and accuracy of the models for each round of
+    all server levels.  - List index: epochs
+                        - Tuple index 0: depth level (root, ..., leaf)
+    :param file_save_path: Path to save the plot
+    :return: None
+    """
+    if not loss_and_accuracy:
+        print('No data to plot')
+        return
+
+    num_level = len(loss_and_accuracy[0])  # Number of server tree hierarchy levels
+    server_avg_accuracies = []  # stores accuracies for each level [root, ..., leaf]
+    server_avg_losses = []  # stores losses for each level [root, ..., leaf]
+
+    for level in range(num_level):
+        server_avg_accuracies.append([x[level][1] for x in loss_and_accuracy])
+        server_avg_losses.append([x[level][0] for x in loss_and_accuracy])
+
+    # Plot the average loss of the server against the number of rounds
+    plt.figure()  # Create a new figure for loss
+    for level in range(num_level):
+        plt.plot(server_avg_losses[level], label=f'Level {level} Average Server Loss')
+
+    if file_save_path is None:
+        file_save_path = constants.Paths.PLOT_SAVE_PATH
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
+                            constants.Plots.SERVER_LEVEL_AVG_LOSS_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.SERVER_LEVEL_AVG_LOSS_VS_ROUNDS_PNG)
+
+    # Plot the average accuracy of the server against the number of rounds
+    plt.figure()  # Create a new figure for accuracy
+    for level in range(num_level):
+        plt.plot(server_avg_accuracies[level], label=f'Level {level} Average Server Accuracy')
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
+                            constants.Plots.SERVER_LEVEL_AVG_ACCURACY_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.SERVER_LEVEL_AVG_ACCURACY_VS_ROUNDS_PNG)
+
+
+def plot_server_overall_avg_performance_vs_rounds(loss_and_accuracy: List[Tuple], file_save_path=None) -> None:
+    """
+    Plot the average loss and accuracy of the total server against the number of training rounds
+    :param loss_and_accuracy: List of tuples containing the average loss and accuracy of the models for each round of
+    all server
+    :param file_save_path: Path to save the plot
+    :return: None
+    """
+    # Extract the loss and accuracy values from the list of tuples
+    server_avg_losses = [x[0] for x in loss_and_accuracy]
+    server_avg_accuracies = [x[1] for x in loss_and_accuracy]
+
+    # Plot the average loss of the server against the number of rounds
+    plt.figure()  # Create a new figure for loss
+    plt.plot(server_avg_losses, label='Average Server Loss')
+
+    if file_save_path is None:
+        file_save_path = constants.Paths.PLOT_SAVE_PATH
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.LOSS,
+                            constants.Plots.SERVER_OVERALL_AVG_LOSS_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.SERVEr_OVERALL_AVG_LOSS_VS_ROUNDS_PNG)
+
+    # Plot the average accuracy of the server against the number of rounds
+    plt.figure()  # Create a new figure for accuracy
+    plt.plot(server_avg_accuracies, label='Average Server Accuracy')
+
+    configure_and_save_plot(plt, constants.Plots.NUMBER_OF_ROUNDS, constants.Plots.ACCURACY,
+                            constants.Plots.SERVER_OVERALL_AVG_ACCURACY_VS_ROUNDS_TITLE,
+                            file_save_path + constants.Plots.SERVER_OVERALL_AVG_ACCURACY_VS_ROUNDS_PNG)
+
+
+def configure_and_save_plot(_plt, _x_label, _y_label, _title, _file_path, legend_hadles=None):
     """
     Add labels, title, legend and save the plot and displays it.
     :param _plt: The matplotlib pyplot object.
@@ -124,11 +261,22 @@ def configure_and_save_plot(_plt, _x_label, _y_label, _title, _file_path):
     :param _y_label: The label for the y-axis.
     :param _title: The title of the plot.
     :param _file_path: The path and file name to save the plot.
+    :param legend_hadles: The legend handles to be displayed.
     :return: None
     """
     _plt.xlabel(_x_label)
     _plt.ylabel(_y_label)
-    _plt.legend()
-    _plt.title(_title)
-    _plt.savefig(_file_path)
-    _plt.show()
+    _plt.legend(handles=legend_hadles, loc='best', fontsize=15)
+    # _plt.title(_title)
+
+    # Save the plot as a high-quality PNG
+    png_path = f"{_file_path}.png"
+    _plt.savefig(png_path, dpi=300)  # Increase DPI for higher resolution
+
+    # Save the plot as a PDF
+    pdf_path = f"{_file_path}.pdf"
+    _plt.savefig(pdf_path, format="pdf")
+
+    # Display the plot
+    # _plt.show()
+    _plt.close()
