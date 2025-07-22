@@ -102,7 +102,7 @@ def compute_server_average_metrics(data: List[List[List[Tuple[float, float]]]]) 
 
 
 def split_clients_loss_and_accuracy(clients_loss_and_accuracy: List[List[Tuple[float, float]]],
-                                    drifted_clients: List[int]
+                                    drifted_clients: List[int], drifted_groups: List[List[int]] = None
                                     ) -> Tuple[List[List[Tuple[float, float]]], List[List[Tuple[float, float]]]]:
     """
     Split the clients' loss and accuracy into drifted and non-drifted groups.
@@ -112,18 +112,29 @@ def split_clients_loss_and_accuracy(clients_loss_and_accuracy: List[List[Tuple[f
                                       - Inner list represents clients.
                                       - Tuple contains (loss, accuracy) for each client.
     :param drifted_clients: List of indices representing drifted clients.
+    :param drifted_groups: List of lists representing drifted groups.
     :return: Two lists:
                 - Non-drifted clients' loss and accuracy.
                 - Drifted clients' loss and accuracy.
     """
-    drifted_clients_loss_and_accuracy = [
-        [performance for idx, performance in enumerate(epoch_data) if idx in drifted_clients]
-        for epoch_data in clients_loss_and_accuracy
-    ]
     non_drifted_clients_loss_and_accuracy = [
         [performance for idx, performance in enumerate(epoch_data) if idx not in drifted_clients]
         for epoch_data in clients_loss_and_accuracy
     ]
+
+    if drifted_groups is None:  # If synchronous drift
+        drifted_clients_loss_and_accuracy = [
+            [performance for idx, performance in enumerate(epoch_data) if idx in drifted_clients]
+            for epoch_data in clients_loss_and_accuracy
+        ]
+    else:
+        _drifted_groups = [drifted_groups[0], list(set(drifted_groups[1]) - set(drifted_groups[0]))]
+        drifted_clients_loss_and_accuracy = []
+
+        for group in _drifted_groups:
+            drifted_clients_loss_and_accuracy.append(
+                [[performance for idx, performance in enumerate(epoch_data) if idx in group]
+                 for epoch_data in clients_loss_and_accuracy])
 
     return non_drifted_clients_loss_and_accuracy, drifted_clients_loss_and_accuracy
 

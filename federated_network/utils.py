@@ -99,7 +99,10 @@ def train_client_models(all_clients, sampled_client_ids, servers: List[Server], 
     round_client_loss_and_accuracy = []
     is_server_adaptability = simulation_parameters['is_server_adaptability']
     is_download_from_root_server = simulation_parameters['is_download_from_root_server']
+    is_download_from_level1_server = simulation_parameters['is_download_from_level1_server']
+    is_download_from_level2_server = simulation_parameters['is_download_from_level2_server']
 
+    print("Training client models...")
     # Apply drift to the clients
     if drift.is_drift:
         # Sample data from the drift applied datasets
@@ -113,12 +116,27 @@ def train_client_models(all_clients, sampled_client_ids, servers: List[Server], 
         if is_download_from_root_server:
             # Get the root server
             server = servers[0]
+        elif is_download_from_level1_server:
+            if client.client_id < int(len(all_clients)/len(servers)):
+                server = servers[0]
+            else:
+                server = servers[1]
+        elif is_download_from_level2_server:
+            if client.client_id < int(len(all_clients)/len(servers)):
+                server = servers[0]
+            elif client.client_id < int(2*len(all_clients)/len(servers)):
+                server = servers[1]
+            elif client.client_id < int(3*len(all_clients)/len(servers)):
+                server = servers[2]
+            else:
+                server = servers[3]
         else:
             # Get the server to which the client is connected
             server = servers[client.parent_server_id]
 
         if client.client_id in sampled_client_ids:
             set_parameters(client.model, server.model.state_dict())
+            print('server:' + str(server.server_id) + ' -> ' + 'client:' + str(client.client_id))
 
             if is_server_adaptability:
                 # Evaluates the adaptability of the server model to the data

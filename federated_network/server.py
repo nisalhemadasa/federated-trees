@@ -18,7 +18,7 @@ from models.model import SimpleModel, test, CNNMNIST, CNNCIFAR10
 class Server:
     def __init__(self, _server_id, _abs_id, _strategy, _model, _client_ids=None):
         self.server_id = _server_id
-        self.abs_id = _abs_id   # Absolute ID that keeps a running count of the servers in the server hierarchy
+        self.abs_id = _abs_id  # Absolute ID that keeps a running count of the servers in the server hierarchy
         self.strategy = _strategy
         self.model = _model
         self.client_ids = []  # List of client IDs the server is connected to in the federated network
@@ -50,30 +50,38 @@ def aggregate_client_models(server_hierarchy: List[List[Server]], sampled_client
     :param server_hierarchy: List of servers in the hierarchy
     :param sampled_clients_model_parameters: List of client model parameters
     :param server_test_set: List of test data for server model evaluation, once the aggregation is done
-    :return: List of loss and accuracy at each level of the server hierarchy
+    :return: List of loss and accuracy at each level of the server hierarchy; outer list: server hierarchy levels,
+    inner list: loss and accuracy Tuple at each level (loss, accuracy)
     """
     # Store the loss and accuracy at each level of the server model hierarchy
     server_loss_and_accuracy = []
 
-    # Aggregate the models of the clients to the server model
-    for depth_level in range(len(server_hierarchy)):
+    print('aggregate client models')
+
+    # Aggregate the models of the clients to the server model.Start by aggregating the leaves and move up the hierarchy
+    for depth_level in range(len(server_hierarchy) - 1, -1, -1):
         loss_and_accuracy_at_level = []
 
         for server in server_hierarchy[depth_level]:
-            if depth_level == 0:
+            if depth_level == len(server_hierarchy) - 1:
                 # Leaf nodes: Aggregate client models
                 client_model_parameters = [sampled_clients_model_parameters[client_id] for client_id in
                                            server.client_ids]
+                print('server:' + str(server.server_id) + ' -> ' + 'clients:' + str(server.client_ids))
 
                 # Aggregate client models
                 server.train(client_model_parameters)
             else:
+                # TODO: Remove this block of code once the testing is done
+                l=0
+                # server node aggregation is skipped for now
+                # continue
                 # Internal nodes: Aggregate models from child servers
-                child_server_model_parameters = [child_server.model.state_dict() for child_server in
-                                                 server_hierarchy[depth_level - 1]]
+                # child_server_model_parameters = [server_hierarchy[depth_level + 1][child_server].model.state_dict() for
+                #                                  child_server in server.child_server_ids]
 
                 # Aggregate child server models
-                server.train(child_server_model_parameters)
+                # server.train(child_server_model_parameters)
 
             # Evaluate the server model
             loss, accuracy = server.evaluate(server_test_set)
@@ -81,6 +89,7 @@ def aggregate_client_models(server_hierarchy: List[List[Server]], sampled_client
 
         server_loss_and_accuracy.append(loss_and_accuracy_at_level)
 
+    server_loss_and_accuracy.reverse()  # Reverse the list to get the root first, to be consistent throughout the code
     return server_loss_and_accuracy
 
 
