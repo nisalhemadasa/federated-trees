@@ -85,7 +85,7 @@ class DatasetFileNames:
 
 # Strings related to plots
 class Plots:
-    NUMBER_OF_ROUNDS = 'Number of Rounds'
+    NUMBER_OF_ROUNDS = 'Rounds'
     LOSS = 'Loss'
     ACCURACY = 'Accuracy'
     # for client individual loss/accuracy vs rounds plot
