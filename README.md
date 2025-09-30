@@ -5,11 +5,11 @@ This repository provides code, examples, and utilities to build, train, and eval
 
 ---
 
-## 📚 Paper / Reference
+## Paper / Reference
 
 Please cite the original work as:
  
->@INPROCEEDINGS{11119244,
+<pre>@INPROCEEDINGS{11119244,
   author={Hemadasa, Nisal and Kaaser, Dominik and Schulte, Stefan},
   booktitle={2025 10th International Conference on Fog and Mobile Edge Computing (FMEC)}, 
   title={Hierarchical Bidirectional Aggregation for Federated Learning Under Concept Drift}, 
@@ -18,7 +18,7 @@ Please cite the original work as:
   number={},
   pages={133-140},
   keywords={Adaptation models;Accuracy;Federated learning;Network topology;Scalability;Concept drift;Vegetation;Topology;Servers;Resilience;Machine Learning;Hierarchical Federated Learning;Concept Drift;Bidirectional Aggregation},
-  doi={10.1109/FMEC65595.2025.11119244}}
+  doi={10.1109/FMEC65595.2025.11119244}}</pre>
 
 ---
 
@@ -31,17 +31,18 @@ Please cite the original work as:
 - Logging, plotting, and utility modules  
 
 ## Repository Structure
-.
-├── data/ # Datasets or data loaders (if any)
-├── drift_concepts/ # Concept drift / synthetic drift modules
-├── federated_network/ # Networking / communication / server-client modules
-├── logs/ # Logs generated during training / experiments
-├── models/ # Model definitions, training, inference code
-├── plots/ # Plotting utilities and output figures
-├── strategy/ # Federated strategies / aggregation schemes
-├── constants.py # Global constants and config defaults
-├── main.py # Entry point / orchestration
-├── *.ipynb # Jupyter notebooks (experiments, drift tests, tutorials)
-├── LICENSE # License (Apache 2.0)
-├── README.md # This file
-└── backlog.txt # To-do / future enhancements
+
+<pre>. 
+├── data/ # Datasets or loaders 
+├── drift_concepts/ # Concept drift modules 
+├── federated_network/ # Server–client communication 
+├── logs/ # Training logs 
+├── models/ # Tree model implementations 
+├── plots/ # Plotting utilities and figures 
+├── strategy/ # Federated strategies 
+├── constants.py # Global configs 
+├── main.py # Entry point 
+├── *.ipynb # Example notebooks 
+├── LICENSE # License (Apache 2.0) 
+├── README.md # This file 
+└── backlog.txt # To-do / notes </pre>
