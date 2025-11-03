@@ -18,7 +18,7 @@ import constants
 from data.utils import convert_dataset_to_loader
 from models.model import train, test, SimpleModel, CNNMNIST, CNNCIFAR10
 
-DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
+DEVICE = torch.device("cuda")  # Try "cuda" to train on GPU
 print(
     f"Training on {DEVICE} using PyTorch {torch.__version__}"
 )
