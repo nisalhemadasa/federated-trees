@@ -12,7 +12,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-DEVICE = torch.device("cuda")  # Try "cuda" to train on GPU
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+else:
+    DEVICE = torch.device("cpu")
 print(
     f"Training on {DEVICE} using PyTorch {torch.__version__}"
 )
