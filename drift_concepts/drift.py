@@ -399,6 +399,7 @@ def modify_drifted_client_groups(drift: Drift, _round: int) -> None:
     if _round < drift.async_drift_specs['drift_split_round']:
         drift.drifted_client_indices = drift.async_drift_specs['drift_groups'][0]
     else:
+        # Leave the drift from one group and add another drift to the second group?
         if not drift.drifted_client_indices == drift.async_drift_specs['drift_groups'][1]:
             drift.is_already_applied = False
             drift.drifted_client_indices = drift.async_drift_specs['drift_groups'][1]
