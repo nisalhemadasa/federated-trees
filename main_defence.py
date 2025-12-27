@@ -5,6 +5,7 @@ Author: Nisal Hemadasa
 Date: 19-10-2024
 Version: 1.0
 """
+import torch
 import constants
 from federated_network.network import FederatedNetwork
 from logs.analysis_functions import plot_average_performance
@@ -13,11 +14,11 @@ def main():
     async_drift_specs = dict(
         num_drift_groups=2,  # Number of groups of clients that are affected by the drift asynchronously
         drift_groups=None,  # Groups of clients that are affected by the drift asynchronously
-        drift_split_round=0.8,  # Times at which the drift is split into multiple asynchronous drifts,
+        drift_split_round=0.99,  # Times at which the drift is split into multiple asynchronous drifts,
     )
     # Define the drift specifications
     drift_specifications = dict(
-        clients_fraction=0.375,
+        clients_fraction=0.5,
         # clients_fraction=0.7,
         # Fraction of clients that are affected by the drift (literature also uses a list of fractions)
         drift_localization_factor=1,  # Factor to localize the drift to a certain concentrated group of clients
@@ -26,8 +27,8 @@ def main():
         drift_pattern=constants.DriftPatterns.INCREMENTAL_REOCCURRING,  # Drift pattern, i.e., abrupt, gradual, etc.
         drift_method=constants.DriftCreationMethods.ROTATION,
         # Drift creation method, i.e., label-swapping, rotations
-        drift_start_round=0.5,  # Round at which the drift starts as a fraction of the total number of rounds
-        drift_end_round=0.75,  # Round at which the drift ends as a fraction of the total number of rounds
+        drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds
+        drift_end_round=0.9,  # Round at which the drift ends as a fraction of the total number of rounds
         max_rotation=45,  # Maximum rotation angle for the drift created by rotations
         class_pairs_to_swap=[(1, 2), (5, 6)],  # Classes to be swapped in the label-swapping drift method
         # class_pairs_to_swap=[('Sandal', 'Shirt'), ('Trouser', 'Bag')],  # Classes to be swapped in F_MNIST
@@ -44,8 +45,8 @@ def main():
 
     # Create a federated network
     fed_net = FederatedNetwork(
-        num_client_instances=16,  # Number of clients in the federated network
-        server_tree_layout=[1, 2],
+        num_client_instances=8,  # Number of clients in the federated network
+        server_tree_layout=[1],
         # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
         num_training_rounds=50,  # Number of training rounds (in literature, over 50 rounds are trained.
         dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset
@@ -57,12 +58,19 @@ def main():
     # #################################
     # Async - UTA - D=0.375, L=1
     # #################################
+    # if not constants.ModelSettings.SAVE_MODEL_STATE:
+    #     fed_net.load_model('./root_server_model.pth')
 
     # Running the simulation
     fed_net.run_simulation(
-        file_save_path='./plots/saved_plots/paper/1_2_4_8/76_incr_reocc_D0.375_L1_async_UTA_3/',
-        log_save_path='./logs/saved_logs/paper/1_2_4_8/76_incr_reocc_D0.375_L1_async_UTA_3/')
+        file_save_path='./plots/saved_plots/tests/server_1/long_drift_1/',
+        log_save_path='./logs/saved_logs/tests/server_1/long_drift_1/',)
 
+    print("Plotting simulation complete...")
+    # torch.save(fed_net.server_hierarchy[0][0].model.state_dict(),'./models/saved_models/tests/server_1/drift_rotation_22.5/root_server_model.pth')
+    if constants.ModelSettings.SAVE_MODEL_STATE:
+        fed_net.save_model('./root_server_model3.pth')
+    # fed_net.save_model('./models/saved_models/tests/server_1/base/root_server_model.pth')
 
 if __name__ == "__main__":
     main()
