@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 
 import constants
 import strategy
-from federated_network.client import DEVICE
 from models.model import SimpleModel, test, CNNMNIST, CNNCIFAR10
 
 
@@ -139,12 +138,13 @@ def server_fn(server_id: int, dataset_name: str, server_abs_id: int) -> Server:
     :param server_abs_id: Absolute server ID; a running count of all the servers created
     :returns Server: A Server instance.
     """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     aggregator_strategy = strategy.FedAvg.aggregator_fn()
-    # model = SimpleModel().to(DEVICE)
+    # model = SimpleModel().to(device)
     if dataset_name == constants.DatasetNames.CIFAR_10:
-        model = CNNCIFAR10().to(DEVICE)
+        model = CNNCIFAR10().to(device)
     else:
-        model = CNNMNIST().to(DEVICE)
+        model = CNNMNIST().to(device)
 
     server = Server(_server_id=server_id, _abs_id=server_abs_id, _strategy=aggregator_strategy, _model=model)
 

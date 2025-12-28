@@ -111,6 +111,7 @@ class Drift:
             return _drifted_images, _labels
 
         transition_progress = 0.0
+
         # Calculate rotation parameters
         match self.drift_pattern:
             case constants.DriftPatterns.INCREMENTAL:
@@ -123,7 +124,13 @@ class Drift:
                     transition_progress = 1.0
                 else:
                     transition_progress = 0.0
-
+            case constants.DriftPatterns.INCREMENTAL_REOCCURRING:
+                if self.current_round < self.drift_start_round or self.current_round > self.drift_end_round:
+                    transition_progress = 0.0
+                else:
+                    cycle_length = self.drift_end_round - self.drift_start_round + 1
+                    position_in_cycle = (self.current_round - self.drift_start_round) % cycle_length
+                    transition_progress = np.sin(2 * (position_in_cycle + 1) / cycle_length * np.pi)
 
         rotation_angle = transition_progress * self.max_rotation
         self._applied_angle_logging.append(rotation_angle)

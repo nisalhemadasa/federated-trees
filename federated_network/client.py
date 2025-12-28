@@ -10,6 +10,7 @@ import random
 from collections import OrderedDict
 from typing import List
 
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import torch
 from torch.utils.data import Dataset, Subset
@@ -17,15 +18,6 @@ from torch.utils.data import Dataset, Subset
 import constants
 from data.utils import convert_dataset_to_loader
 from models.model import train, test, SimpleModel, CNNMNIST, CNNCIFAR10
-
-if torch.cuda.is_available():
-    DEVICE = torch.device("cuda")  # Try "cuda" to train on GPU
-else:
-    DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
-print(
-    f"Training on {DEVICE} using PyTorch {torch.__version__}"
-)
-
 
 class Client:
     def __init__(self, client_id, model, epochs, mini_batch_size, local_trainset, testset):
@@ -111,12 +103,13 @@ def client_fn(client_id: int, num_local_epochs: int, mini_batch_size: int, datas
     :param _dataset: train and test datasets
     :returns Client: A Client instance.
     """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Load model
-    # _model = SimpleModel().to(DEVICE)
+    # _model = SimpleModel().to(device)
     if dataset_name == constants.DatasetNames.CIFAR_10:
-        _model = CNNCIFAR10().to(DEVICE)
+        _model = CNNCIFAR10().to(device)
     else:
-        _model = CNNMNIST().to(DEVICE)
+        _model = CNNMNIST().to(device)
 
     # Upacking _dataset (which contains a subset of the complete training set (e.g., MNIST) and the global test set)
     local_trainset, testset = _dataset

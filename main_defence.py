@@ -12,6 +12,8 @@ from logs.analysis_functions import plot_average_performance
 import matplotlib.pyplot as plt
 
 def main():
+    print("torch threads:", torch.get_num_threads())
+
     async_drift_specs = dict(
         num_drift_groups=1,  # Number of groups of clients that are affected by the drift asynchronously
         drift_groups=None,  # Groups of clients that are affected by the drift asynchronously
@@ -25,7 +27,7 @@ def main():
         drift_localization_factor=1,  # Factor to localize the drift to a certain concentrated group of clients
         is_synchronous=True,  # If the drift is synchronous or asynchronous
         async_drift_specs=async_drift_specs,  # Specifications for the asynchronous case
-        drift_pattern=constants.DriftPatterns.GRADUAL,  # Drift pattern, i.e., abrupt, gradual, etc.
+        drift_pattern=constants.DriftPatterns.INCREMENTAL_REOCCURRING,  # Drift pattern, i.e., abrupt, gradual, etc.
         drift_method=constants.DriftCreationMethods.ROTATION,
         # Drift creation method, i.e., label-swapping, rotations
         drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds

@@ -102,11 +102,13 @@ class FederatedNetwork:
 
         # Start the timer
         start_time = time.time()
-
         # Train the clients initially using their local data
         initial_client_loss_and_accuracy = client_initial_training(self.clients)
         # clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
+        # Start the timer
+        end_initial_training_time = time.time()
+        print("End of initial training took : " + str(end_initial_training_time - start_time) + " seconds")
         # Load the test set for server evaluation
         server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
 
