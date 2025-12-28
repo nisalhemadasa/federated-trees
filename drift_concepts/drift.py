@@ -18,6 +18,19 @@ import torchvision.transforms as transforms
 import constants
 from federated_network.client import Client
 
+def smooth_ramp(x: float, x0: float, x1: float, L: float = 6.0) -> float:
+    """0 until x0, smooth logistic ramp to 1 by x1, then stay at 1."""
+    if x <= x0:
+        return 0.0
+    if x >= x1:
+        return 1.0
+
+    # Map x from [x0, x1] -> [-L, +L]
+    t = (x - x0) / (x1 - x0)          # in (0, 1)
+    z = 2.0 * L * (t - 0.5)           # in (-L, +L)
+
+    return 1.0 / (1.0 + math.exp(-z))
+
 
 class Drift:
     def __init__(self, num_drifted_clients, drift_localization_factor, is_synchronous, async_drift_specs, drift_pattern,
@@ -65,6 +78,12 @@ class Drift:
         # Flag to indicate if the drift is applied on the client data at least once before
         self.is_already_applied = False
 
+        # Logging the drift transition
+        self._applied_angle_logging = []
+
+        # Applied rotation angle (for rotation drift method)
+        self.applied_angle = 0
+
     def rotate_images(self, clients: List[Client]) -> List[Client]:
         """
         Apply rotation drift to the images of the client dataset. Both the rotation angle and the number of images to
@@ -84,25 +103,38 @@ class Drift:
             _labels = dataset.targets  # Access dataset labels
             # num_images_to_rotate = int(_fraction_rotated * len(_images))
             _drifted_images = _images.clone()
-
+            angle = _rotation_angle - self.applied_angle
             for i in range(len(_images)):
-                rotated_image = rotate(_images[i].numpy(), _rotation_angle, reshape=False)
+                rotated_image = rotate(_images[i].numpy(), angle, reshape=False)
                 _drifted_images[i] = torch.tensor(rotated_image)
 
             return _drifted_images, _labels
 
+        transition_progress = 0.0
         # Calculate rotation parameters
-        transition_progress = ((self.current_round + 1) - self.drift_start_round) / (
-                self.drift_end_round - self.drift_start_round)
+        match self.drift_pattern:
+            case constants.DriftPatterns.INCREMENTAL:
+                transition_progress = ((self.current_round + 1) - self.drift_start_round) / (
+                        self.drift_end_round - self.drift_start_round)
+            case constants.DriftPatterns.GRADUAL:
+                transition_progress = smooth_ramp(self.current_round, self.drift_start_round, self.drift_end_round)
+            case constants.DriftPatterns.ABRUPT:
+                if self.current_round >= self.drift_start_round:
+                    transition_progress = 1.0
+                else:
+                    transition_progress = 0.0
+
+
         rotation_angle = transition_progress * self.max_rotation
-        # rotation_angle = self.max_rotation
-        total_rounds = self.drift_end_round - self.drift_start_round + 1
-        fraction_rotated = (self.current_round - self.drift_start_round + 1) / total_rounds
+        self._applied_angle_logging.append(rotation_angle)
 
         # Check if there are drifted clients
         if self.drifted_client_indices:
             # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
             first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
+
+            if self.applied_angle == rotation_angle:
+                return clients
 
             # Process training dataset
             train_images, train_labels = apply_rotation(first_drifted_client.local_trainset.dataset, rotation_angle)
@@ -119,6 +151,7 @@ class Drift:
                 clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
                 clients[idx].testset.dataset = first_drifted_client.testset.dataset
 
+            self.applied_angle = rotation_angle
         return clients
 
     def swap_labels(self, clients: List[Client]) -> List[Client]:
@@ -452,11 +485,12 @@ def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:
     """
     if drift.drift_method == constants.DriftCreationMethods.LABEL_SWAPPING:
         # For label swapping, application of drift once in the simulation is sufficient & speeds up the simulation
-        if not drift.is_already_applied:
-            drift.is_already_applied = True
-            return drift.swap_labels(clients)
-        else:
-            return clients
+        if drift.is_drift:
+            if not drift.is_already_applied:
+                drift.is_already_applied = True
+                return drift.swap_labels(clients)
+            else:
+                return clients
     elif drift.drift_method == constants.DriftCreationMethods.ROTATION:
         # Since rotation is continuously applied, it is speed-wise optimum to apply drift for sampled data in each round
         for client in clients:

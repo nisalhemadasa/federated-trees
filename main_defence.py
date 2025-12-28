@@ -9,12 +9,13 @@ import torch
 import constants
 from federated_network.network import FederatedNetwork
 from logs.analysis_functions import plot_average_performance
+import matplotlib.pyplot as plt
 
 def main():
     async_drift_specs = dict(
-        num_drift_groups=2,  # Number of groups of clients that are affected by the drift asynchronously
+        num_drift_groups=1,  # Number of groups of clients that are affected by the drift asynchronously
         drift_groups=None,  # Groups of clients that are affected by the drift asynchronously
-        drift_split_round=0.99,  # Times at which the drift is split into multiple asynchronous drifts,
+        drift_split_round=1,  # Times at which the drift is split into multiple asynchronous drifts,
     )
     # Define the drift specifications
     drift_specifications = dict(
@@ -22,9 +23,9 @@ def main():
         # clients_fraction=0.7,
         # Fraction of clients that are affected by the drift (literature also uses a list of fractions)
         drift_localization_factor=1,  # Factor to localize the drift to a certain concentrated group of clients
-        is_synchronous=False,  # If the drift is synchronous or asynchronous
+        is_synchronous=True,  # If the drift is synchronous or asynchronous
         async_drift_specs=async_drift_specs,  # Specifications for the asynchronous case
-        drift_pattern=constants.DriftPatterns.INCREMENTAL_REOCCURRING,  # Drift pattern, i.e., abrupt, gradual, etc.
+        drift_pattern=constants.DriftPatterns.GRADUAL,  # Drift pattern, i.e., abrupt, gradual, etc.
         drift_method=constants.DriftCreationMethods.ROTATION,
         # Drift creation method, i.e., label-swapping, rotations
         drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds
@@ -48,7 +49,7 @@ def main():
         num_client_instances=8,  # Number of clients in the federated network
         server_tree_layout=[1],
         # Number of servers at each level of the server tree of depth n = [n, n-1,..., 1]
-        num_training_rounds=50,  # Number of training rounds (in literature, over 50 rounds are trained.
+        num_training_rounds=20,  # Number of training rounds (in literature, over 50 rounds are trained.
         dataset_name=constants.DatasetNames.MNIST,  # Name of the dataset
         drift_specs=drift_specifications,  # Drift specifications
         simulation_parameters=simulation_parameters,  # Parameters specifying the simulation scenarios
@@ -71,6 +72,15 @@ def main():
     if constants.ModelSettings.SAVE_MODEL_STATE:
         fed_net.save_model('./root_server_model3.pth')
     # fed_net.save_model('./models/saved_models/tests/server_1/base/root_server_model.pth')
+
+    plt.figure()
+    plt.plot(fed_net.drift._applied_angle_logging)
+    plt.title("Drift Transition Progress")
+    plt.xlabel("Training Round")
+    plt.ylabel("Transition Progress")
+    import os
+    os.makedirs("./plots/saved_plots/tests/drifts/", exist_ok=True)
+    plt.savefig(f"./plots/saved_plots/tests/drifts/drift_{fed_net.drift.drift_pattern}_{str(fed_net.drift.max_rotation)}.png")
 
 if __name__ == "__main__":
     main()
