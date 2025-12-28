@@ -125,7 +125,7 @@ class DriftPatterns:
     REOCCURRING = 'reoccurring'
     INCREMENTAL_ABRUPT = 'incre-abrupt'
     ABRUPT_REOCURRING = 'abrupt-reoc'
-    INCREMENTAL_REOCCURRING = 'incr-reoc'
+    GRADUAL_REOCCURRING = 'grad-reoc'
     OUT_OF_CONTROL = 'out-of-control'
 
 

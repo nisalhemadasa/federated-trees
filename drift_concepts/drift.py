@@ -124,7 +124,7 @@ class Drift:
                     transition_progress = 1.0
                 else:
                     transition_progress = 0.0
-            case constants.DriftPatterns.INCREMENTAL_REOCCURRING:
+            case constants.DriftPatterns.GRADUAL_REOCCURRING:
                 if self.current_round < self.drift_start_round or self.current_round > self.drift_end_round:
                     transition_progress = 0.0
                 else:
