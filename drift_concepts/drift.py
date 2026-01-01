@@ -35,7 +35,7 @@ def smooth_ramp(x: float, x0: float, x1: float, L: float = 6.0) -> float:
 class Drift:
     def __init__(self, num_drifted_clients, drift_localization_factor, is_synchronous, async_drift_specs, drift_pattern,
                  drift_method, drift_start_round, drift_end_round, drifted_client_indices, max_rotation,
-                 class_pairs_to_swap):
+                 class_pairs_to_swap, num_drift_cycles=1):
         # Number of clients to be applied with drifted data
         self.num_drifted_clients = num_drifted_clients
 
@@ -84,6 +84,9 @@ class Drift:
         # Applied rotation angle (for rotation drift method)
         self.applied_angle = 0
 
+        # Number of drift cycles
+        self.num_drift_cycles = num_drift_cycles
+
     def rotate_images(self, clients: List[Client]) -> List[Client]:
         """
         Apply rotation drift to the images of the client dataset. Both the rotation angle and the number of images to
@@ -130,7 +133,10 @@ class Drift:
                 else:
                     cycle_length = self.drift_end_round - self.drift_start_round + 1
                     position_in_cycle = (self.current_round - self.drift_start_round) % cycle_length
-                    transition_progress = np.sin(2 * (position_in_cycle + 1) / cycle_length * np.pi)
+                    # Use num_drift_cycles to have multiple cycles across the drift period
+                    transition_progress = np.sin(
+                        2 * self.num_drift_cycles * (position_in_cycle + 1) / cycle_length * np.pi
+                    )
 
         rotation_angle = transition_progress * self.max_rotation
         self._applied_angle_logging.append(rotation_angle)
@@ -480,7 +486,8 @@ def drift_fn(num_client_instances: int, num_training_rounds: int, drift_specs: D
                                                                drift_specs['is_synchronous'],
                                                                drift_specs['async_drift_specs']),
                  max_rotation=drift_specs['max_rotation'],
-                 class_pairs_to_swap=drift_specs['class_pairs_to_swap'])
+                 class_pairs_to_swap=drift_specs['class_pairs_to_swap'],
+                 num_drift_cycles=drift_specs['num_drift_cycles'])
 
 
 def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:

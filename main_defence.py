@@ -35,6 +35,7 @@ def main():
         max_rotation=45,  # Maximum rotation angle for the drift created by rotations
         class_pairs_to_swap=[(1, 2), (5, 6)],  # Classes to be swapped in the label-swapping drift method
         # class_pairs_to_swap=[('Sandal', 'Shirt'), ('Trouser', 'Bag')],  # Classes to be swapped in F_MNIST
+        num_drift_cycles=2, # Number of drift cycles
     )
 
     # Define simulation parameters
