@@ -27,15 +27,16 @@ def main():
         drift_localization_factor=1,  # Factor to localize the drift to a certain concentrated group of clients
         is_synchronous=True,  # If the drift is synchronous or asynchronous
         async_drift_specs=async_drift_specs,  # Specifications for the asynchronous case
-        drift_pattern=constants.DriftPatterns.GRADUAL_REOCCURRING,  # Drift pattern, i.e., abrupt, gradual, etc.
-        drift_method=constants.DriftCreationMethods.ROTATION,
+        drift_pattern=constants.DriftPatterns.INCREMENTAL,  # Drift pattern, i.e., abrupt, gradual, etc.
+        drift_method=constants.DriftCreationMethods.LABEL_SWAPPING,
         # Drift creation method, i.e., label-swapping, rotations
-        drift_start_round=0.1,  # Round at which the drift starts as a fraction of the total number of rounds
+        drift_start_round=0.0,  # Round at which the drift starts as a fraction of the total number of rounds
         drift_end_round=0.9,  # Round at which the drift ends as a fraction of the total number of rounds
         max_rotation=45,  # Maximum rotation angle for the drift created by rotations
         class_pairs_to_swap=[(1, 2), (5, 6)],  # Classes to be swapped in the label-swapping drift method
         # class_pairs_to_swap=[('Sandal', 'Shirt'), ('Trouser', 'Bag')],  # Classes to be swapped in F_MNIST
         num_drift_cycles=2, # Number of drift cycles
+        swap_direction='unidirectional', # Direction of label swapping ('unidirectional' or 'bidirectional')
     )
 
     # Define simulation parameters
@@ -67,8 +68,8 @@ def main():
 
     # Running the simulation
     fed_net.run_simulation(
-        file_save_path='./plots/saved_plots/tests/server_1/long_drift_1/',
-        log_save_path='./logs/saved_logs/tests/server_1/long_drift_1/',)
+        file_save_path='./plots/saved_plots/ls_tests/server_1/long_drift_1/',
+        log_save_path='./logs/saved_logs/ls_tests/server_1/long_drift_1/',)
 
     print("Plotting simulation complete...")
     # torch.save(fed_net.server_hierarchy[0][0].model.state_dict(),'./models/saved_models/tests/server_1/drift_rotation_22.5/root_server_model.pth')
@@ -77,13 +78,13 @@ def main():
     # fed_net.save_model('./models/saved_models/tests/server_1/base/root_server_model.pth')
 
     plt.figure()
-    plt.plot(fed_net.drift._applied_angle_logging)
+    plt.plot(fed_net.drift._applied_drift_logging)
     plt.title("Drift Transition Progress")
     plt.xlabel("Training Round")
     plt.ylabel("Transition Progress")
     import os
-    os.makedirs("./plots/saved_plots/tests/drifts/", exist_ok=True)
-    plt.savefig(f"./plots/saved_plots/tests/drifts/drift_{fed_net.drift.drift_pattern}_{str(fed_net.drift.max_rotation)}.png")
+    os.makedirs("./plots/saved_plots/ls_tests/drifts/", exist_ok=True)
+    plt.savefig(f"./plots/saved_plots/ls_tests/drifts/drift_{fed_net.drift.drift_pattern}_{str(fed_net.drift.max_rotation)}.png")
 
 if __name__ == "__main__":
     main()
