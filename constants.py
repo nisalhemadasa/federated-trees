@@ -119,14 +119,14 @@ class Plots:
 
 # Drift patterns
 class DriftPatterns:
-    ABRUPT = 'abrupt' # Implemented
-    GRADUAL = 'gradual' # Implemented
-    INCREMENTAL = 'incremental' # Implemented
-    REOCCURRING = 'reoccurring'
-    INCREMENTAL_ABRUPT = 'incre-abrupt'
-    ABRUPT_REOCURRING = 'abrupt-reoc'
-    GRADUAL_REOCCURRING = 'grad-reoc'
-    OUT_OF_CONTROL = 'out-of-control'
+    ABRUPT = 'abrupt'  # Implemented
+    GRADUAL = 'gradual'  # Implemented
+    INCREMENTAL = 'incremental'  # Implemented
+    # REOCCURRING = 'reoccurring'
+    # INCREMENTAL_ABRUPT = 'incre-abrupt'
+    # ABRUPT_REOCURRING = 'abrupt-reoc'
+    GRADUAL_REOCCURRING = 'grad-reoc'  # Implemented
+    # OUT_OF_CONTROL = 'out-of-control'
 
 
 # Drift creation methods
