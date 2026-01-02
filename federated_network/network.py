@@ -48,7 +48,7 @@ class FederatedNetwork:
         self.num_client_instances = num_client_instances
 
         # Load the dataset
-        self.trainset, self.testset = load_datasets(dataset_name)
+        self.trainset, self.testset, self._original_trainset, self._original_testset = load_datasets(dataset_name)
 
         # Partition the data set into subsets for each client
         partitioned_trainsets = split_dataset(self.trainset, self.num_client_instances)
@@ -170,6 +170,10 @@ class FederatedNetwork:
                                                                  self.drift,
                                                                  self.simulation_parameters)
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
+
+            if self._original_testset is not None and self._original_trainset is not None:
+                for client in self.clients:
+                    client.restore_original_data(self._original_trainset, self._original_testset)
 
             # Update the progress of the simulation
             update_progress(_round=_round + 1, num_training_rounds=self.num_training_rounds)

@@ -10,14 +10,13 @@ import random
 from collections import OrderedDict
 from typing import List
 
-from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import torch
 from torch.utils.data import Dataset, Subset
 
 import constants
 from data.utils import convert_dataset_to_loader
-from models.model import train, test, SimpleModel, CNNMNIST, CNNCIFAR10
+from models.model import train, test, CNNMNIST, CNNCIFAR10
 
 class Client:
     def __init__(self, client_id, model, epochs, mini_batch_size, local_trainset, testset):
@@ -65,6 +64,13 @@ class Client:
         loss, accuracy = test(self.model, self.testloader)
         return float(loss), float(accuracy)
 
+    def restore_original_data(self, _original_trainset, _original_testset):
+        """ Restore the original data and labels of the client """
+        self.local_trainset.dataset.data = _original_trainset[0].detach().clone()
+        self.local_trainset.dataset.targets = _original_trainset[1].detach().clone()
+
+        self.testset.dataset.data = _original_testset[0].detach().clone()
+        self.testset.dataset.targets = _original_testset[1].detach().clone()
 
 def set_parameters(_model, parameters: OrderedDict):
     """ Set the model weights and biases """

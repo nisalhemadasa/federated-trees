@@ -81,8 +81,8 @@ class Drift:
         # Logging the drift transition
         self._applied_drift_logging = []
 
-        # Applied rotation angle (for rotation drift method)
-        self.applied_drift = 0
+        # # Applied rotation angle (for rotation drift method)
+        # self.applied_drift = 0
 
         # Number of drift cycles
         self.num_drift_cycles = num_drift_cycles
@@ -104,7 +104,7 @@ class Drift:
         :return: List of Client objects with the rotated images in their datasets
         """
 
-        def apply_rotation(dataset, _rotation_angle):
+        def apply_rotation(dataset, angle):
             """
             Apply rotation drift to a fraction of the images.
             :param dataset: Dataset to process
@@ -113,9 +113,8 @@ class Drift:
             """
             _images = dataset.data  # Access dataset images
             _labels = dataset.targets  # Access dataset labels
-            # num_images_to_rotate = int(_fraction_rotated * len(_images))
             _drifted_images = _images.clone()
-            angle = _rotation_angle - self.applied_drift
+
             for i in range(len(_images)):
                 if not self.classes_to_rotate or _labels[i].item() in self.classes_to_rotate:
                     rotated_image = rotate(_images[i].numpy(), angle, reshape=False)
@@ -156,9 +155,6 @@ class Drift:
             # Identify the first drifted client to process the dataset and duplicate a copy (not the reference)
             first_drifted_client = copy.deepcopy(clients[self.drifted_client_indices[0]])
 
-            if self.applied_drift == rotation_angle:
-                return clients
-
             # Process training dataset
             train_images, train_labels = apply_rotation(first_drifted_client.local_trainset.dataset, rotation_angle)
             first_drifted_client.local_trainset.dataset.data = train_images
@@ -174,7 +170,12 @@ class Drift:
                 clients[idx].local_trainset.dataset = first_drifted_client.local_trainset.dataset
                 clients[idx].testset.dataset = first_drifted_client.testset.dataset
 
-            self.applied_drift = rotation_angle
+        # TODO: Improve this
+        from matplotlib.pyplot import imsave
+        import os
+        path = "./plots/drifted_images/rotation_tests/" + f"drift_{self.drift_pattern}_{str(self.max_rotation)}/"
+        os.makedirs(path, exist_ok=True)
+        imsave(f"{path}image_in_round_{self.current_round}.png", first_drifted_client.local_trainset.dataset.data[0].numpy())
         return clients
 
     def swap_labels(self, clients: List[Client]) -> List[Client]:
@@ -385,20 +386,15 @@ def apply_drift(clients: List[Client], drift: Drift) -> List[Client]:
     :param drift: Drift object
     :return: List of Client objects with drifted data (dataloaders)
     """
-    if drift.drift_method == constants.DriftCreationMethods.LABEL_SWAPPING:
-        # Apply drift every round for gradual patterns
-        for client in clients:
-            # Each client samples data for local training from their mutually own (exclusively partitioned) datasets
-            client.sample_data()
+    for client in clients:
+        client.sample_data()
 
-        return drift.swap_labels(clients)
-    elif drift.drift_method == constants.DriftCreationMethods.ROTATION:
-        # Since rotation is continuously applied, it is speed-wise optimum to apply drift for sampled data in each round
-        for client in clients:
-            # Each client samples data for local training from their mutually own (exclusively partitioned) datasets
-            client.sample_data()
+    match drift.drift_method:
+        case constants.DriftCreationMethods.LABEL_SWAPPING:
+            return drift.swap_labels(clients)
+        case constants.DriftCreationMethods.ROTATION:
+            return drift.rotate_images(clients)
+        case _:
+            print("Drift method not recognized. No drift applied.")
 
-        return drift.rotate_images(clients)
-    else:
-        print("Drift method not recognized. No drift applied.")
-        return clients
+    return clients
