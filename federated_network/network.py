@@ -9,6 +9,8 @@ import random
 import time
 from typing import List
 
+import torch
+
 import constants
 from data.dataset_loader import load_datasets
 from data.utils import split_dataset, convert_dataset_to_loader
@@ -229,3 +231,27 @@ class FederatedNetwork:
                                               file_save_path=file_save_path)
         plot_server_lvl_avg_performance_vs_rounds(server_level_averages, file_save_path=file_save_path)
         plot_server_overall_avg_performance_vs_rounds(server_overall_averages, file_save_path=file_save_path)
+
+    def save_model(self, path: str) -> None:
+        """
+        Save the model of the root server to the specified path.
+        :param path: Path to save the model
+        :return: None
+        """
+        import os
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        torch.save(self.server_hierarchy[0][0].model.state_dict(), path)
+
+    def load_model(self, path: str) -> None:
+        """
+        Load the model of the root server from the specified path.
+        :param path: Path to load the model
+        :return: None
+        """
+        import os
+
+        if not os.path.exists(os.path.dirname(path)):
+            raise FileNotFoundError(f"Model file not found at {path}")
+        weights = torch.load(path)
+        self.server_hierarchy[0][0].model.load_state_dict(weights)

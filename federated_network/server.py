@@ -7,6 +7,7 @@ Version: 1.0
 """
 from typing import List, OrderedDict
 
+import torch
 from torch.utils.data import DataLoader
 
 import constants
@@ -33,7 +34,7 @@ class Server:
         """
         self.model = self.strategy.aggregate_models(self.model, client_model_parameters)
 
-    def evaluate(self, _test_set: DataLoader) -> (float, float):
+    def evaluate(self, _test_set: DataLoader) -> tuple[float, float]:
         """
         Evaluate the server model using the validation data.
         :param _test_set: test data
@@ -145,4 +146,9 @@ def server_fn(server_id: int, dataset_name: str, server_abs_id: int) -> Server:
     else:
         model = CNNMNIST().to(DEVICE)
 
-    return Server(_server_id=server_id, _abs_id=server_abs_id, _strategy=aggregator_strategy, _model=model)
+    server = Server(_server_id=server_id, _abs_id=server_abs_id, _strategy=aggregator_strategy, _model=model)
+
+    if constants.ModelSettings.LOAD_MODEL_STATE:
+        server.model.load_state_dict(torch.load(constants.Paths.MODEL_SAVE_PATH))
+
+    return server

@@ -17,6 +17,9 @@ class Paths:
 
     # path related to saved logs
     LOG_SAVE_PATH = './logs/saved_logs/'
+    
+    # saved model path
+    MODEL_SAVE_PATH = './root_server_model_20_rounds_CIFAR.pth'
 
 
 # File extensions
@@ -143,3 +146,7 @@ class Logs:
     SERVER_LVL_AVG_LOG = 'server_level_avg_log'
     SERVER_OVERALL_AVG_LOG = 'server_overall_avg_log'
 
+
+class ModelSettings:
+    SAVE_MODEL_STATE = False  # Whether to save the model state after training
+    LOAD_MODEL_STATE = True  # Whether to load the model state before training
