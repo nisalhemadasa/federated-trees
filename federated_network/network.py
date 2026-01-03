@@ -48,7 +48,7 @@ class FederatedNetwork:
         self.num_client_instances = num_client_instances
 
         # Load the dataset
-        self.trainset, self.testset = load_datasets(dataset_name)
+        self.trainset, self.testset, self._original_trainset, self._original_testset = load_datasets(dataset_name)
 
         # Partition the data set into subsets for each client
         partitioned_trainsets = split_dataset(self.trainset, self.num_client_instances)
@@ -102,18 +102,20 @@ class FederatedNetwork:
 
         # Start the timer
         start_time = time.time()
-
         # Train the clients initially using their local data
         initial_client_loss_and_accuracy = client_initial_training(self.clients)
         # clients_loss_and_accuracy.append(initial_client_loss_and_accuracy)
 
+        # Start the timer
+        end_initial_training_time = time.time()
+        print("End of initial training took : " + str(end_initial_training_time - start_time) + " seconds")
         # Load the test set for server evaluation
         server_test_set = convert_dataset_to_loader(_dataset=self.testset, _batch_size=self.minibatch_size)
 
         for _round in range(self.num_training_rounds):
             # Add drift to the clients, if within the drift period
+            self.drift.current_round = _round
             if self.drift.drift_start_round < _round < self.drift.drift_end_round:
-                self.drift.current_round = _round
                 self.drift.is_drift = True
 
                 # Modify the client groups if the drift is asynchronous
@@ -168,6 +170,10 @@ class FederatedNetwork:
                                                                  self.drift,
                                                                  self.simulation_parameters)
             clients_loss_and_accuracy.append(round_client_loss_and_accuracy)
+
+            if self._original_testset is not None and self._original_trainset is not None:
+                for client in self.clients:
+                    client.restore_original_data(self._original_trainset, self._original_testset)
 
             # Update the progress of the simulation
             update_progress(_round=_round + 1, num_training_rounds=self.num_training_rounds)
