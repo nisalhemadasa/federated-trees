@@ -198,24 +198,30 @@ class Drift:
             for class_a, class_b in self.class_pairs_to_swap:
                 if self.swap_direction == 'unidirectional':
                     indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
-                    print("Len indices_a for class ", class_a, ": ", len(indices_a))
-                    # Initialize original count if not already
-                    if class_a not in self.original_class_counts:
-                        self.original_class_counts[class_a] = len(indices_a)
-
-                    # Calculate already swapped
-                    already_swapped = self.original_class_counts[class_a] - len(indices_a)
 
                     # Calculate target number to swap cumulatively
-                    target_swapped = int(transition_progress * self.original_class_counts[class_a])
-                    num_to_swap = target_swapped - already_swapped
+                    target_swapped = int(transition_progress * indices_a)
 
-                    if num_to_swap > 0 and len(indices_a) > 0:
-                        # Randomly select indices to swap
-                        indices_a_to_swap = indices_a[torch.randperm(len(indices_a))[:num_to_swap]]
+                    # Randomly select indices to swap
+                    indices_a_to_swap = indices_a[torch.randperm(len(indices_a))[:target_swapped]]
 
-                        # Change labels from class_a to class_b
-                        labels[indices_a_to_swap] = class_b
+                    # Change labels from class_a to class_b
+                    labels[indices_a_to_swap] = class_b
+
+                if self.swap_direction == 'bidirectional':
+                    indices_a = (labels == class_a).nonzero(as_tuple=True)[0]
+                    indices_b = (labels == class_b).nonzero(as_tuple=True)[0]
+
+                    # Calculate target number to swap cumulatively
+                    target_swapped = int(transition_progress * min(len(indices_a), len(indices_b)))
+
+                    # Randomly select indices to swap from class_a to class_b
+                    indices_a_to_swap = indices_a[torch.randperm(len(indices_a))[:target_swapped]]
+                    labels[indices_a_to_swap] = class_b
+
+                    # Randomly select indices to swap from class_b to class_a
+                    indices_b_to_swap = indices_b[torch.randperm(len(indices_b))[:target_swapped]]
+                    labels[indices_b_to_swap] = class_a
 
             return images, labels
 
